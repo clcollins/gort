@@ -27,6 +27,6 @@ COPY --from=builder /workspace/gort /gort
 # Run as non-root (UID 65532 = "nonroot" convention).
 USER 65532:65532
 
-EXPOSE 8080
+EXPOSE 8080 8081
 
 ENTRYPOINT ["/gort"]

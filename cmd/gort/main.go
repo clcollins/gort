@@ -128,19 +128,31 @@ func run() error {
 		}
 	}
 
-	mux := http.NewServeMux()
-	mux.Handle("/webhook", webhook.NewHandler(cfg.webhookSecret, dispatch))
-	mux.Handle("/metrics", promhttp.Handler())
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	// webhookMux handles inbound GitHub webhook traffic only.
+	webhookMux := http.NewServeMux()
+	webhookMux.Handle("/webhook", webhook.NewHandler(cfg.webhookSecret, dispatch))
+
+	// metricsMux exposes Prometheus metrics and Kubernetes health probes on a
+	// dedicated port so that scrape traffic is independent of webhook ingress.
+	metricsMux := http.NewServeMux()
+	metricsMux.Handle("/metrics", promhttp.Handler())
+	metricsMux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
+	metricsMux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	srv := &http.Server{
+	webhookSrv := &http.Server{
 		Addr:         cfg.listenAddr,
-		Handler:      mux,
+		Handler:      webhookMux,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+	metricsSrv := &http.Server{
+		Addr:         cfg.metricsAddr,
+		Handler:      metricsMux,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -150,9 +162,16 @@ func run() error {
 	defer stop()
 
 	go func() {
-		slog.Info("starting server", "addr", cfg.listenAddr)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("server", "err", err)
+		slog.Info("starting webhook server", "addr", cfg.listenAddr)
+		if err := webhookSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("webhook server", "err", err)
+			stop()
+		}
+	}()
+	go func() {
+		slog.Info("starting metrics server", "addr", cfg.metricsAddr)
+		if err := metricsSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("metrics server", "err", err)
 			stop()
 		}
 	}()
@@ -162,11 +181,15 @@ func run() error {
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return srv.Shutdown(shutdownCtx)
+	if err := webhookSrv.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("webhook server shutdown: %w", err)
+	}
+	return metricsSrv.Shutdown(shutdownCtx)
 }
 
 type appConfig struct {
 	listenAddr    string
+	metricsAddr   string
 	webhookSecret string
 	githubToken   string
 	claudeAPIKey  string
@@ -176,6 +199,7 @@ type appConfig struct {
 func loadConfig() appConfig {
 	cfg := appConfig{
 		listenAddr:  getEnv("GORT_LISTEN_ADDR", ":8080"),
+		metricsAddr: getEnv("GORT_METRICS_ADDR", ":8081"),
 		claudeModel: getEnv("GORT_CLAUDE_MODEL", "claude-sonnet-4-6"),
 	}
 	cfg.webhookSecret = mustEnv("GORT_WEBHOOK_SECRET")

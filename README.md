@@ -62,9 +62,16 @@ spec:
 
 ## Observability
 
-- **`/metrics`** — Prometheus metrics endpoint
-- **`/healthz`** — liveness probe
-- **`/readyz`** — readiness probe
+GORT runs two HTTP servers so that Prometheus scrape traffic is independent of webhook ingress:
+
+| Port | Purpose | Endpoints |
+|------|---------|-----------|
+| `8080` | Webhook (application traffic) | `POST /webhook` |
+| `8081` | Metrics + health probes | `GET /metrics`, `GET /healthz`, `GET /readyz` |
+
+- **`/metrics`** — Prometheus metrics (port `8081`); scraped via the `ServiceMonitor` in `config/prometheus/`
+- **`/healthz`** — liveness probe (port `8081`)
+- **`/readyz`** — readiness probe (port `8081`)
 - **Alertmanager** rules in `config/alerting/alerts.yaml`:
   - `FluxReconcileFailed` (critical)
   - `FluxReconcileTimeout` (warning)
@@ -121,7 +128,8 @@ make generate
 | `GORT_GITHUB_TOKEN` | yes | — | GitHub personal access token (repo + PR scope) |
 | `GORT_CLAUDE_API_KEY` | yes | — | Anthropic Claude API key |
 | `GORT_CLAUDE_MODEL` | no | `claude-sonnet-4-6` | Claude model to use |
-| `GORT_LISTEN_ADDR` | no | `:8080` | HTTP server listen address |
+| `GORT_LISTEN_ADDR` | no | `:8080` | Webhook server listen address |
+| `GORT_METRICS_ADDR` | no | `:8081` | Metrics + health probe server listen address |
 
 ## Project Layout
 
@@ -144,6 +152,8 @@ config/
   crd/                — Generated CRD manifests
   rbac/               — ClusterRole + ClusterRoleBinding
   alerting/           — PrometheusRule manifest
+  service/            — Kubernetes Service manifests (webhook + metrics)
+  prometheus/         — ServiceMonitor for Prometheus Operator
 docs/plans/           — Plan documents (required per PR)
 hack/                 — Code generation scripts and headers
 ```

@@ -1,0 +1,37 @@
+# Service: webhook — receives inbound GitHub webhook traffic.
+# Exposed via an Ingress or LoadBalancer; not scraped by Prometheus.
+apiVersion: v1
+kind: Service
+metadata:
+  name: gort-webhook
+  namespace: gort-system
+  labels:
+    app.kubernetes.io/name: gort
+    app.kubernetes.io/component: webhook
+spec:
+  selector:
+    app.kubernetes.io/name: gort
+  ports:
+    - name: webhook
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+---
+# Service: metrics — Prometheus scrape target and kubelet probe endpoint.
+# Selected by the ServiceMonitor below.
+apiVersion: v1
+kind: Service
+metadata:
+  name: gort-metrics
+  namespace: gort-system
+  labels:
+    app.kubernetes.io/name: gort
+    app.kubernetes.io/component: metrics
+spec:
+  selector:
+    app.kubernetes.io/name: gort
+  ports:
+    - name: metrics
+      port: 8081
+      targetPort: 8081
+      protocol: TCP
