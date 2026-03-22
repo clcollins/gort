@@ -1,4 +1,4 @@
-# GORT — GitOps Reconcile Tools
+# GORT — GitOps Reconciliation Tool
 
 GORT closes the feedback loop after a merge to `main`. It watches for GitHub push events,
 polls Flux until reconciliation completes, and if anything goes wrong it uses the Claude

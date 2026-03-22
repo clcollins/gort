@@ -26,30 +26,19 @@ jobs:
           cache: true
 
       - name: Verify go.mod is tidy
-        run: |
-          go mod tidy
-          git diff --exit-code go.mod go.sum
+        run: make tidy-check
 
       - name: gofmt
-        run: |
-          diff=$(gofmt -l .)
-          if [ -n "$diff" ]; then
-            echo "The following files need formatting:"
-            echo "$diff"
-            exit 1
-          fi
+        run: make fmt
 
       - name: go vet
-        run: go vet ./...
+        run: make vet
 
       - name: go test
-        run: go test -race -count=1 -timeout=5m ./...
+        run: make test
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
-          args: --timeout=5m
+        run: make lint
 
   # ── Docs check ───────────────────────────────────────────────────────────────
   docs-check:
@@ -61,27 +50,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check for plan document in docs/plans/
-        run: |
-          # On a PR, check that at least one docs/plans/*.md was added or modified.
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            base="${{ github.event.pull_request.base.sha }}"
-            head="${{ github.event.pull_request.head.sha }}"
-            changed=$(git diff --name-only "$base" "$head" -- 'docs/plans/*.md')
-            if [ -z "$changed" ]; then
-              echo "ERROR: This PR does not include a plan document in docs/plans/."
-              echo "Every PR must add or update a docs/plans/*.md file describing the change."
-              exit 1
-            fi
-            echo "Plan document(s) found:"
-            echo "$changed"
-          else
-            # On push to main, just verify the directory is non-empty.
-            count=$(find docs/plans -name '*.md' 2>/dev/null | wc -l)
-            if [ "$count" -eq 0 ]; then
-              echo "ERROR: docs/plans/ contains no plan documents."
-              exit 1
-            fi
-          fi
+        run: make docs-check
 
   # ── Markdown lint ─────────────────────────────────────────────────────────────
   markdown-lint:
@@ -91,11 +60,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run markdownlint-cli2
-        uses: DavidAnson/markdownlint-cli2-action@v16
-        with:
-          globs: |
-            docs/**/*.md
-            *.md
+        run: make markdown-lint
 
   # ── Makefile lint ─────────────────────────────────────────────────────────────
   makefile-lint:
@@ -110,11 +75,8 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - name: Install checkmake
-        run: go install github.com/mrtazz/checkmake/cmd/checkmake@latest
-
       - name: Run checkmake
-        run: checkmake Makefile
+        run: make makefile-lint
 
   # ── Container image build ─────────────────────────────────────────────────────
   image-build:
@@ -123,9 +85,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build container image (podman)
-        run: |
-          podman build \
-            --tag ghcr.io/clcollins/gort:ci-${{ github.sha }} \
-            --file Containerfile \
-            .
+      - name: Build container image
+        run: make image-build

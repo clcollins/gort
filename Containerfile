@@ -1,5 +1,5 @@
 # Stage 1: build
-FROM docker.io/library/golang:1.25 AS builder
+FROM registry.access.redhat.com/ubi9/go-toolset:latest AS builder
 
 WORKDIR /workspace
 

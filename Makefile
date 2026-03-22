@@ -1,8 +1,9 @@
-# GORT — GitOps Reconcile Tools
+# GORT — GitOps Reconciliation Tool
 # All container operations use $(CONTAINER_ENGINE), defaulting to podman.
 
 CONTAINER_ENGINE ?= podman
-IMAGE_REPO       ?= ghcr.io/clcollins/gort
+IMAGE_REGISTRY   ?= quay.io/chcollin
+IMAGE_REPO       ?= $(IMAGE_REGISTRY)/gort
 VERSION          ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 IMAGE_TAG        ?= $(IMAGE_REPO):$(VERSION)
 
@@ -56,7 +57,7 @@ lint: $(GOLANGCI_LINT) ## Run golangci-lint
 
 .PHONY: markdown-lint
 markdown-lint: ## Lint all markdown files with markdownlint-cli2
-	markdownlint-cli2 "docs/**/*.md" "*.md"
+	npx --yes markdownlint-cli2 "docs/**/*.md" "*.md"
 
 .PHONY: makefile-lint
 makefile-lint: $(CHECKMAKE) ## Lint this Makefile with checkmake
@@ -99,6 +100,11 @@ image-push: ## Push the container image using $(CONTAINER_ENGINE)
 .PHONY: tidy
 tidy: ## Run go mod tidy
 	$(GO) mod tidy
+
+.PHONY: tidy-check
+tidy-check: ## Verify go.mod and go.sum are tidy (no uncommitted changes after go mod tidy)
+	$(GO) mod tidy
+	git diff --exit-code go.mod go.sum
 
 $(CONTROLLER_GEN):
 	$(GO) install sigs.k8s.io/controller-tools/cmd/controller-gen@latest

@@ -9,7 +9,7 @@ and events — then manual authoring of a fix PR.
 
 ## Proposed Solution
 
-GORT (GitOps Reconcile Tools) is a containerized Go service that:
+GORT (GitOps Reconciliation Tool) is a containerized Go service that:
 
 1. Receives GitHub webhook events on pushes to `main`.
 2. Reads the associated `GitOpsWatcher` CRDs from the cluster to determine which Flux apps

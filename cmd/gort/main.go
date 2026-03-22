@@ -1,4 +1,4 @@
-// Command gort is the GORT (GitOps Reconcile Tools) server.
+// Command gort is the GORT (GitOps Reconciliation Tool) server.
 // It wires all components together and starts the webhook HTTP server.
 package main
 
