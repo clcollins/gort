@@ -160,4 +160,13 @@ hack/                 — Code generation scripts and headers
 
 ## License
 
-MIT © Christopher Collins 2026
+This project is licensed under the [MIT License](LICENSE). Copyright © 2026 Christopher Collins.
+
+**Note on AI-Generated Content:** This software was developed with the assistance
+of AI tools. To the extent that any AI-generated content incorporated in this
+software is protectable by copyright, the copyright holder asserts that such
+content is covered by, and licensed under, the MIT License.
+
+The legal status of AI-generated content with respect to copyright is unsettled.
+This notice reflects the copyright holder's present intent and is subject to
+revision as law and legal interpretation develop.
