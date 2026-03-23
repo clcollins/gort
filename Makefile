@@ -67,13 +67,10 @@ makefile-lint: $(CHECKMAKE) ## Lint this Makefile with checkmake
 
 .PHONY: docs-check
 docs-check: ## Fail if docs/plans/ contains no .md files
-	@echo "Checking for plan documents in docs/plans/..."
 	@count=$$(find docs/plans -name '*.md' 2>/dev/null | wc -l); \
-	if [ "$$count" -eq 0 ]; then \
-		echo "ERROR: No plan documents found in docs/plans/. Every change must include a plan."; \
-		exit 1; \
-	fi
-	@echo "OK: $$count plan document(s) found."
+	[ "$$count" -gt 0 ] || \
+		{ echo "ERROR: No plan documents found in docs/plans/. Every change must include a plan."; exit 1; }; \
+	echo "OK: $$count plan document(s) found."
 
 # ── Code Generation ────────────────────────────────────────────────────────────
 
@@ -114,6 +111,12 @@ $(GOLANGCI_LINT):
 
 $(CHECKMAKE):
 	$(GO) install github.com/checkmake/checkmake/cmd/checkmake@latest
+
+# ── Clean ──────────────────────────────────────────────────────────────────────
+
+.PHONY: clean
+clean: ## Remove build artifacts
+	rm -rf bin/
 
 # ── Help ───────────────────────────────────────────────────────────────────────
 
