@@ -5,12 +5,8 @@ package github
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"strings"
-	"testing"
 
 	"github.com/clcollins/gort/internal/metrics"
 	"github.com/clcollins/gort/internal/webhook"
@@ -27,15 +23,6 @@ type client struct {
 // gc may be nil only in tests that bypass API calls (e.g. ValidateWebhook tests).
 func NewClient(gc *gogithub.Client, webhookSecret string) vcs.Client {
 	return &client{gh: gc, webhookSecret: webhookSecret}
-}
-
-// ComputeTestHMAC is exported for use in tests only.
-// It computes the hex-encoded HMAC-SHA256 of payload using secret.
-func ComputeTestHMAC(t *testing.T, payload []byte, secret string) string {
-	t.Helper()
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write(payload)
-	return hex.EncodeToString(mac.Sum(nil))
 }
 
 func (c *client) ValidateWebhook(ctx context.Context, payload []byte, signature string) (*vcs.PushEvent, error) {

@@ -2,6 +2,9 @@ package github_test
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -32,7 +35,7 @@ func TestValidateWebhook_Valid(t *testing.T) {
 	c := github.NewClient(nil, "webhook-secret")
 
 	import_payload := []byte(`{"ref":"refs/heads/main","after":"abc","repository":{"full_name":"org/repo"},"head_commit":{"message":"x","timestamp":"2026-01-01T00:00:00Z"}}`)
-	sig := github.ComputeTestHMAC(t, import_payload, "webhook-secret")
+	sig := computeHMAC(t, import_payload, "webhook-secret")
 
 	event, err := c.ValidateWebhook(context.Background(), import_payload, "sha256="+sig)
 	if err != nil {
@@ -129,4 +132,11 @@ func TestCreatePullRequest(t *testing.T) {
 	if pr.Number != 42 {
 		t.Errorf("pr.Number: got %d, want 42", pr.Number)
 	}
+}
+
+func computeHMAC(t *testing.T, payload []byte, secret string) string {
+	t.Helper()
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(payload)
+	return hex.EncodeToString(mac.Sum(nil))
 }

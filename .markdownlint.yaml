@@ -1,0 +1,9 @@
+# Markdownlint configuration for GORT.
+# Reference: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+# Disable line-length checks: technical docs with code spans, links, and
+# table cells routinely exceed 80/120 chars and wrapping them hurts readability.
+MD013: false
+
+# Allow raw HTML in markdown (used for complex tables in some editors).
+MD033: false
