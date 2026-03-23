@@ -34,8 +34,15 @@ jobs:
       - name: go vet
         run: make vet
 
-      - name: go test
-        run: make test
+      - name: go test with coverage
+        run: make cover
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.out
+          fail_ci_if_error: true
 
       - name: golangci-lint
         run: make lint

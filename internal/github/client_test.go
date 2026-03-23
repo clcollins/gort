@@ -62,7 +62,9 @@ func TestGetFileContents(t *testing.T) {
 			"encoding": "base64",
 			"content":  "IyBQbGFu\n", // base64("# Plan")
 		}
-		json.NewEncoder(w).Encode(content)
+		if err := json.NewEncoder(w).Encode(content); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	})
 
 	_, gc := newTestServer(t, mux)

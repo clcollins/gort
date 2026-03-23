@@ -1,5 +1,8 @@
 # GORT — GitOps Reconciliation Tool
 
+[![CI](https://github.com/clcollins/gort/actions/workflows/ci.yaml/badge.svg)](https://github.com/clcollins/gort/actions/workflows/ci.yaml)
+[![codecov](https://codecov.io/gh/clcollins/gort/branch/main/graph/badge.svg)](https://codecov.io/gh/clcollins/gort)
+
 GORT closes the feedback loop after a merge to `main`. It watches for GitHub push events,
 polls Flux until reconciliation completes, and if anything goes wrong it uses the Claude
 API to analyze the failure and automatically opens a fix PR.

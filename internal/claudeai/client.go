@@ -322,11 +322,3 @@ func parseIntentResponse(text string) *ai.IntentValidationResult {
 	return result
 }
 
-// runtimeStateToString serializes a RuntimeState for embedding in prompts.
-func runtimeStateToString(state *gitops.RuntimeState) string {
-	if state == nil {
-		return ""
-	}
-	b, _ := json.MarshalIndent(state, "", "  ")
-	return string(b)
-}

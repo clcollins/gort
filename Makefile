@@ -34,6 +34,10 @@ test: ## Run all Go tests with the race detector
 test-verbose: ## Run all Go tests with verbose output
 	$(GO) test -race -count=1 -v -timeout=5m ./...
 
+.PHONY: cover
+cover: ## Run tests and emit coverage profile (coverage.out)
+	$(GO) test -race -count=1 -timeout=5m -coverprofile=coverage.out -covermode=atomic ./...
+
 # ── Code Quality ───────────────────────────────────────────────────────────────
 
 .PHONY: fmt

@@ -31,7 +31,9 @@ func newTestServer(t *testing.T, response map[string]any) *httptest.Server {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}))
 	t.Cleanup(srv.Close)
 	return srv
@@ -78,7 +80,9 @@ resources:
 func TestAnalyze_APIError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(map[string]any{"error": map[string]any{"type": "authentication_error", "message": "Invalid API key"}})
+		if err := json.NewEncoder(w).Encode(map[string]any{"error": map[string]any{"type": "authentication_error", "message": "Invalid API key"}}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}))
 	t.Cleanup(srv.Close)
 
