@@ -24,7 +24,7 @@ GORT (GitOps Reconciliation Tool) is a containerized Go service that:
 
 ## Architecture
 
-```
+```text
 GitHub push to main
        │
        ▼
@@ -53,7 +53,7 @@ pkg/gitops.Client  →  internal/flux  (Flux Kustomization/HelmRelease + K8s rea
 ## Interface Extensibility
 
 | Interface | Default Impl | Extensible To |
-|---|---|---|
+| --- | --- | --- |
 | `pkg/gitops.Client` | Flux (kustomize + helm + source controllers) | ArgoCD, Rancher Fleet |
 | `pkg/vcs.Client` | GitHub (`go-github`) | GitLab, Gitea |
 | `pkg/ai.Client` | Claude (Anthropic SDK) | OpenAI, Gemini, local LLMs |

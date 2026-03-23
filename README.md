@@ -13,7 +13,7 @@ pod logs, and events — then manual authoring of a fix PR.
 
 ## How It Works
 
-```
+```text
 GitHub push to main
        │
        ▼
@@ -35,7 +35,7 @@ Flux status polling (in-cluster, read-only K8s API)
 ## Interface Extensibility
 
 | Interface | Default | Extensible To |
-|---|---|---|
+| --- | --- | --- |
 | `pkg/gitops.Client` | Flux CD | ArgoCD, Rancher Fleet |
 | `pkg/vcs.Client` | GitHub | GitLab, Gitea |
 | `pkg/ai.Client` | Claude (Anthropic) | OpenAI, Gemini, local LLMs |
@@ -64,10 +64,10 @@ spec:
 
 GORT runs two HTTP servers so that Prometheus scrape traffic is independent of webhook ingress:
 
-| Port | Purpose | Endpoints |
-|------|---------|-----------|
-| `8080` | Webhook (application traffic) | `POST /webhook` |
-| `8081` | Metrics + health probes | `GET /metrics`, `GET /healthz`, `GET /readyz` |
+| Port   | Purpose                       | Endpoints                                     |
+| ------ | ----------------------------- | --------------------------------------------- |
+| `8080` | Webhook (application traffic) | `POST /webhook`                               |
+| `8081` | Metrics + health probes       | `GET /metrics`, `GET /healthz`, `GET /readyz` |
 
 - **`/metrics`** — Prometheus metrics (port `8081`); scraped via the `ServiceMonitor` in `config/prometheus/`
 - **`/healthz`** — liveness probe (port `8081`)
@@ -123,7 +123,7 @@ make generate
 ### Environment Variables
 
 | Variable | Required | Default | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `GORT_WEBHOOK_SECRET` | yes | — | GitHub webhook HMAC secret |
 | `GORT_GITHUB_TOKEN` | yes | — | GitHub personal access token (repo + PR scope) |
 | `GORT_CLAUDE_API_KEY` | yes | — | Anthropic Claude API key |
@@ -133,7 +133,7 @@ make generate
 
 ## Project Layout
 
-```
+```text
 cmd/gort/             — main entrypoint
 internal/
   claudeai/           — Claude AI client (implements pkg/ai.Client)
