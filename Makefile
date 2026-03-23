@@ -98,20 +98,24 @@ image-push: ## Push the container image using $(CONTAINER_ENGINE)
 
 # ── Local CI ───────────────────────────────────────────────────────────────────
 
-CI_IMAGE ?= golang:latest
-
 .PHONY: ci-all
 ci-all: tidy-check fmt vet cover lint docs-check markdown-lint makefile-lint image-build ## Run all CI checks locally (mirrors .github/workflows/ci.yaml)
 
 .PHONY: ci-container
-ci-container: ## Run all CI checks inside a $(CI_IMAGE) container (set CONTAINER_ENGINE=docker if needed)
+ci-container: ## Run all CI checks inside ubuntu:latest (mirrors GitHub Actions ubuntu-latest environment)
 	$(CONTAINER_ENGINE) run --rm \
 		-v "$(CURDIR):/workspace:z" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /workspace \
 		-e CONTAINER_ENGINE=docker \
-		$(CI_IMAGE) \
-		bash -c "apt-get update -q && apt-get install -y -q --no-install-recommends make nodejs npm docker.io && make ci-all"
+		ubuntu:latest \
+		bash -c "apt-get update -q && \
+			apt-get install -y -q --no-install-recommends wget tar git make nodejs npm docker.io && \
+			GO_VERSION=$$(grep '^go ' go.mod | awk '{print $$2}') && \
+			wget -q https://go.dev/dl/go$${GO_VERSION}.linux-amd64.tar.gz -O /tmp/go.tar.gz && \
+			tar -C /usr/local -xzf /tmp/go.tar.gz && \
+			export PATH=$$PATH:/usr/local/go/bin && \
+			make ci-all"
 
 # ── Dependencies / Tools ───────────────────────────────────────────────────────
 
