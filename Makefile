@@ -113,7 +113,7 @@ $(GOLANGCI_LINT):
 	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 $(CHECKMAKE):
-	$(GO) install github.com/mrtazz/checkmake/cmd/checkmake@latest
+	$(GO) install github.com/checkmake/checkmake/cmd/checkmake@latest
 
 # ── Help ───────────────────────────────────────────────────────────────────────
 
