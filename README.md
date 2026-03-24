@@ -96,7 +96,7 @@ GORT follows the same convention when opening fix PRs on target repos.
 
 ### Prerequisites
 
-- Go 1.24+
+- Go 1.25.1+
 - Podman (or set `CONTAINER_SUBSYS=docker`)
 - `markdownlint-cli2` (for markdown linting)
 

@@ -25,7 +25,7 @@ spec:
               GORT detected a Flux reconciliation failure for watcher {{ $labels.watcher }}.
               A fix PR may have been opened. Check the GORT logs and the target repository
               for an auto-generated PR.
-            runbook_url: "https://github.com/clcollins/gort/docs/runbooks/flux-reconcile-failed.md"
+            runbook_url: "https://github.com/clcollins/gort/blob/main/docs/runbooks/flux-reconcile-failed.md"
 
         - alert: FluxReconcileTimeout
           expr: increase(gort_reconcile_polls_total{result="timeout"}[10m]) > 0

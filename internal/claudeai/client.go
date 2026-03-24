@@ -303,7 +303,8 @@ func parseIntentResponse(text string) *ai.IntentValidationResult {
 			}
 		case strings.HasPrefix(line, "FIX_PLAN:"):
 			result.FixPlan = strings.TrimSpace(strings.TrimPrefix(line, "FIX_PLAN:"))
-		case !inFile && currentPath == "" && (strings.HasSuffix(line, ".yaml") || strings.HasSuffix(line, ".md")):
+		case !inFile && currentPath == "" &&
+			(strings.HasSuffix(strings.TrimSpace(line), ".yaml") || strings.HasSuffix(strings.TrimSpace(line), ".md")):
 			currentPath = strings.TrimSpace(line)
 		case line == "---" && currentPath != "" && !inFile:
 			inFile = true

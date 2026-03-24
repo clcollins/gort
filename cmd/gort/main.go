@@ -34,9 +34,13 @@ import (
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1"
 )
 
+// version is set at build time via -ldflags="-X main.version=...".
+var version string
+
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
+	slog.Info("starting gort", "version", version)
 
 	if err := run(); err != nil {
 		slog.Error("fatal", "err", err)

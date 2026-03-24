@@ -202,7 +202,7 @@ func (r *reconciler) fetchPlanDocuments(ctx context.Context, repo string, docsPa
 	return docs, nil
 }
 
-// BuildBranchName creates a deterministic, URL-safe branch name. Pure function.
+// BuildBranchName creates a URL-safe branch name with a nanosecond timestamp.
 func BuildBranchName(reason, watcherName string) string {
 	ts := time.Now().UTC().Format("20060102-150405.000000000")
 	name := fmt.Sprintf("gort/%s/%s/%s", reason, watcherName, ts)
