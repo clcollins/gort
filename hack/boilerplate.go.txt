@@ -1,0 +1,8 @@
+// Copyright 2026 Christopher Collins
+//
+// Licensed under the MIT License. See LICENSE in the project root for details.
+//
+// Note on AI-Generated Content: This file may contain content produced with
+// the assistance of AI tools. To the extent such content is protectable by
+// copyright, it is covered by the MIT License. The legal status of
+// AI-generated content remains unsettled; this notice is subject to change.

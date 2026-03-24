@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Go checks ────────────────────────────────────────────────────────────────
+  go-checks:
+    name: Go checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Verify go.mod is tidy
+        run: make tidy-check
+
+      - name: gofmt
+        run: make fmt
+
+      - name: go vet
+        run: make vet
+
+      - name: go test with coverage
+        run: make cover
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.out
+          fail_ci_if_error: true
+
+      - name: golangci-lint
+        run: make lint
+
+  # ── Docs check ───────────────────────────────────────────────────────────────
+  docs-check:
+    name: Plan document required
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for plan document in docs/plans/
+        run: make docs-check
+
+  # ── Markdown lint ─────────────────────────────────────────────────────────────
+  markdown-lint:
+    name: Markdown lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run markdownlint-cli2
+        run: make markdown-lint
+
+  # ── Makefile lint ─────────────────────────────────────────────────────────────
+  makefile-lint:
+    name: Makefile lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go (for checkmake install)
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run checkmake
+        run: make makefile-lint
+
+  # ── Container image build ─────────────────────────────────────────────────────
+  image-build:
+    name: Container image build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build container image
+        run: make image-build
+        env:
+          CONTAINER_SUBSYS: docker
