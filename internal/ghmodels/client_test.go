@@ -1,4 +1,4 @@
-package copilot_test
+package ghmodels_test
 
 import (
 	"context"
@@ -7,13 +7,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/clcollins/gort/internal/copilot"
+	"github.com/clcollins/gort/internal/ghmodels"
 	"github.com/clcollins/gort/pkg/ai"
 	"github.com/clcollins/gort/pkg/gitops"
 )
 
-// copilotChatResponse returns a minimal OpenAI-compatible chat completions response.
-func copilotChatResponse(content string) map[string]any {
+// chatCompletionResponse returns a minimal OpenAI-compatible chat completions response.
+func chatCompletionResponse(content string) map[string]any {
 	return map[string]any{
 		"id":     "chatcmpl-test",
 		"object": "chat.completion",
@@ -34,10 +34,21 @@ func copilotChatResponse(content string) map[string]any {
 func newTestServer(t *testing.T, response map[string]any) *httptest.Server {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Verify authorization header is set.
+		// Verify required headers.
 		if auth := r.Header.Get("Authorization"); auth != "Bearer test-token" {
-			t.Errorf("expected Authorization header 'Bearer test-token', got %q", auth)
+			t.Errorf("expected Authorization 'Bearer test-token', got %q", auth)
 		}
+		if accept := r.Header.Get("Accept"); accept != "application/vnd.github+json" {
+			t.Errorf("expected Accept 'application/vnd.github+json', got %q", accept)
+		}
+		if apiVer := r.Header.Get("X-GitHub-Api-Version"); apiVer == "" {
+			t.Error("expected X-GitHub-Api-Version header to be set")
+		}
+		// Verify endpoint path.
+		if r.URL.Path != "/inference/chat/completions" {
+			t.Errorf("expected path /inference/chat/completions, got %q", r.URL.Path)
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(response); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -57,8 +68,8 @@ resources:
 - ../../base
 ---`
 
-	srv := newTestServer(t, copilotChatResponse(responseText))
-	c := copilot.NewClient("test-token", "gpt-4o", copilot.WithBaseURL(srv.URL))
+	srv := newTestServer(t, chatCompletionResponse(responseText))
+	c := ghmodels.NewClient("test-token", "openai/gpt-4.1", ghmodels.WithBaseURL(srv.URL))
 
 	req := ai.AnalysisRequest{
 		ReconcileStatus: &gitops.ReconciliationStatus{
@@ -94,7 +105,7 @@ func TestAnalyze_APIError(t *testing.T) {
 	}))
 	t.Cleanup(srv.Close)
 
-	c := copilot.NewClient("bad-token", "gpt-4o", copilot.WithBaseURL(srv.URL))
+	c := ghmodels.NewClient("bad-token", "openai/gpt-4.1", ghmodels.WithBaseURL(srv.URL))
 	_, err := c.Analyze(context.Background(), ai.AnalysisRequest{})
 	if err == nil {
 		t.Fatal("expected error for 401 response")
@@ -106,8 +117,8 @@ func TestValidateIntent_Met(t *testing.T) {
 ISSUES: none
 FIX_PLAN: none required`
 
-	srv := newTestServer(t, copilotChatResponse(responseText))
-	c := copilot.NewClient("test-token", "gpt-4o", copilot.WithBaseURL(srv.URL))
+	srv := newTestServer(t, chatCompletionResponse(responseText))
+	c := ghmodels.NewClient("test-token", "openai/gpt-4.1", ghmodels.WithBaseURL(srv.URL))
 
 	req := ai.IntentValidationRequest{
 		RuntimeState: &gitops.RuntimeState{
@@ -142,8 +153,8 @@ resources:
     memory: 256Mi
 ---`
 
-	srv := newTestServer(t, copilotChatResponse(responseText))
-	c := copilot.NewClient("test-token", "gpt-4o", copilot.WithBaseURL(srv.URL))
+	srv := newTestServer(t, chatCompletionResponse(responseText))
+	c := ghmodels.NewClient("test-token", "openai/gpt-4.1", ghmodels.WithBaseURL(srv.URL))
 
 	req := ai.IntentValidationRequest{
 		RuntimeState: &gitops.RuntimeState{

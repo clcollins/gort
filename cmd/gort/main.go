@@ -25,7 +25,7 @@ import (
 	gortv1alpha1 "github.com/clcollins/gort/api/v1alpha1"
 	"github.com/clcollins/gort/pkg/ai"
 	"github.com/clcollins/gort/internal/claudeai"
-	"github.com/clcollins/gort/internal/copilot"
+	"github.com/clcollins/gort/internal/ghmodels"
 	"github.com/clcollins/gort/internal/flux"
 	githubclient "github.com/clcollins/gort/internal/github"
 	internalk8s "github.com/clcollins/gort/internal/k8s"
@@ -93,8 +93,8 @@ func run() error {
 	switch cfg.aiProvider {
 	case "claude":
 		aiClient = claudeai.NewClient(cfg.claudeAPIKey, cfg.claudeModel)
-	case "copilot":
-		aiClient = copilot.NewClient(cfg.copilotToken, cfg.copilotModel)
+	case "github-models":
+		aiClient = ghmodels.NewClient(cfg.ghModelsToken, cfg.ghModelsModel)
 	}
 
 	// Build reconciler.
@@ -218,8 +218,8 @@ type appConfig struct {
 	aiProvider    string
 	claudeAPIKey  string
 	claudeModel   string
-	copilotToken  string
-	copilotModel  string
+	ghModelsToken string
+	ghModelsModel string
 }
 
 func loadConfig() appConfig {
@@ -228,7 +228,7 @@ func loadConfig() appConfig {
 		metricsAddr:  getEnv("GORT_METRICS_ADDR", ":8081"),
 		aiProvider:   getEnv("GORT_AI_PROVIDER", "claude"),
 		claudeModel:  getEnv("GORT_CLAUDE_MODEL", "claude-sonnet-4-6"),
-		copilotModel: getEnv("GORT_COPILOT_MODEL", "gpt-4o"),
+		ghModelsModel: getEnv("GORT_GITHUB_MODELS_MODEL", "openai/gpt-4.1"),
 	}
 	cfg.webhookSecret = mustEnv("GORT_WEBHOOK_SECRET")
 	cfg.githubToken = mustEnv("GORT_GITHUB_TOKEN")
@@ -236,8 +236,8 @@ func loadConfig() appConfig {
 	switch cfg.aiProvider {
 	case "claude":
 		cfg.claudeAPIKey = mustEnv("GORT_CLAUDE_API_KEY")
-	case "copilot":
-		cfg.copilotToken = getEnv("GORT_COPILOT_TOKEN", cfg.githubToken)
+	case "github-models":
+		cfg.ghModelsToken = getEnv("GORT_GITHUB_MODELS_TOKEN", cfg.githubToken)
 	default:
 		slog.Error("unsupported AI provider", "provider", cfg.aiProvider)
 		os.Exit(1)

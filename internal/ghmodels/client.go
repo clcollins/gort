@@ -1,6 +1,6 @@
-// Package copilot implements pkg/ai.Client using the GitHub Copilot chat completions API.
+// Package ghmodels implements pkg/ai.Client using the GitHub Models inference API.
 // The base URL is configurable so tests can point at an httptest server.
-package copilot
+package ghmodels
 
 import (
 	"bytes"
@@ -18,14 +18,15 @@ import (
 )
 
 const (
-	defaultBaseURL = "https://api.githubcopilot.com"
-	maxTokens      = 4096
+	defaultBaseURL    = "https://models.github.ai"
+	githubAPIVersion  = "2025-04-01"
+	maxTokens         = 4096
 )
 
-// Option configures the Copilot client.
+// Option configures the GitHub Models client.
 type Option func(*client)
 
-// WithBaseURL overrides the Copilot API base URL. Used in tests.
+// WithBaseURL overrides the GitHub Models API base URL. Used in tests.
 func WithBaseURL(url string) Option {
 	return func(c *client) { c.baseURL = strings.TrimRight(url, "/") }
 }
@@ -42,7 +43,8 @@ type client struct {
 	httpClient *http.Client
 }
 
-// NewClient returns an ai.Client backed by the GitHub Copilot chat completions API.
+// NewClient returns an ai.Client backed by the GitHub Models inference API.
+// The token should be a GitHub PAT with models:read scope.
 func NewClient(token, model string, opts ...Option) ai.Client {
 	c := &client{
 		token:      token,
@@ -90,45 +92,47 @@ func (c *client) callChat(ctx context.Context, userPrompt string) (string, error
 	}
 	body, err := json.Marshal(reqBody)
 	if err != nil {
-		return "", fmt.Errorf("copilot: marshal request: %w", err)
+		return "", fmt.Errorf("ghmodels: marshal request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/chat/completions", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/inference/chat/completions", bytes.NewReader(body))
 	if err != nil {
-		return "", fmt.Errorf("copilot: build request: %w", err)
+		return "", fmt.Errorf("ghmodels: build request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("X-GitHub-Api-Version", githubAPIVersion)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("copilot: http: %w", err)
+		return "", fmt.Errorf("ghmodels: http: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("copilot: read response: %w", err)
+		return "", fmt.Errorf("ghmodels: read response: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("copilot: API status %d: %s", resp.StatusCode, string(respBytes))
+		return "", fmt.Errorf("ghmodels: API status %d: %s", resp.StatusCode, string(respBytes))
 	}
 
 	var cr chatResponse
 	if err := json.Unmarshal(respBytes, &cr); err != nil {
-		return "", fmt.Errorf("copilot: unmarshal response: %w", err)
+		return "", fmt.Errorf("ghmodels: unmarshal response: %w", err)
 	}
 	if cr.Error != nil {
-		return "", fmt.Errorf("copilot: API error %s: %s", cr.Error.Type, cr.Error.Message)
+		return "", fmt.Errorf("ghmodels: API error %s: %s", cr.Error.Type, cr.Error.Message)
 	}
 	if len(cr.Choices) == 0 {
-		return "", fmt.Errorf("copilot: no choices in response")
+		return "", fmt.Errorf("ghmodels: no choices in response")
 	}
 	return cr.Choices[0].Message.Content, nil
 }
 
-// Analyze sends a Flux failure context to Copilot and parses the structured response.
+// Analyze sends a Flux failure context to GitHub Models and parses the structured response.
 func (c *client) Analyze(ctx context.Context, req ai.AnalysisRequest) (*ai.AnalysisResult, error) {
 	start := time.Now()
 	p := prompt.BuildAnalysisPrompt(req)
@@ -138,7 +142,7 @@ func (c *client) Analyze(ctx context.Context, req ai.AnalysisRequest) (*ai.Analy
 	if err != nil {
 		metrics.AIRequestsTotal.WithLabelValues("analyze", "error").Inc()
 		metrics.AIRequestDurationSeconds.WithLabelValues("analyze").Observe(duration)
-		return nil, fmt.Errorf("copilot: analyze: %w", err)
+		return nil, fmt.Errorf("ghmodels: analyze: %w", err)
 	}
 	metrics.AIRequestsTotal.WithLabelValues("analyze", "success").Inc()
 	metrics.AIRequestDurationSeconds.WithLabelValues("analyze").Observe(duration)
@@ -146,7 +150,7 @@ func (c *client) Analyze(ctx context.Context, req ai.AnalysisRequest) (*ai.Analy
 	return prompt.ParseAnalysisResponse(text), nil
 }
 
-// ValidateIntent sends the runtime state and plan docs to Copilot for intent validation.
+// ValidateIntent sends the runtime state and plan docs to GitHub Models for intent validation.
 func (c *client) ValidateIntent(ctx context.Context, req ai.IntentValidationRequest) (*ai.IntentValidationResult, error) {
 	start := time.Now()
 	p := prompt.BuildIntentPrompt(req)
@@ -156,7 +160,7 @@ func (c *client) ValidateIntent(ctx context.Context, req ai.IntentValidationRequ
 	if err != nil {
 		metrics.AIRequestsTotal.WithLabelValues("validate_intent", "error").Inc()
 		metrics.AIRequestDurationSeconds.WithLabelValues("validate_intent").Observe(duration)
-		return nil, fmt.Errorf("copilot: validate intent: %w", err)
+		return nil, fmt.Errorf("ghmodels: validate intent: %w", err)
 	}
 	metrics.AIRequestsTotal.WithLabelValues("validate_intent", "success").Inc()
 	metrics.AIRequestDurationSeconds.WithLabelValues("validate_intent").Observe(duration)
