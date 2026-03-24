@@ -1,5 +1,7 @@
 # GORT — GitOps Reconciliation Tool
 
+![GORT](img/gort.png)
+
 [![CI](https://github.com/clcollins/gort/actions/workflows/ci.yaml/badge.svg)](https://github.com/clcollins/gort/actions/workflows/ci.yaml)
 [![codecov](https://codecov.io/gh/clcollins/gort/branch/main/graph/badge.svg)](https://codecov.io/gh/clcollins/gort)
 
