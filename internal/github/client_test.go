@@ -87,7 +87,9 @@ func TestListDirectory(t *testing.T) {
 			{"type": "file", "path": "docs/plans/0002.md"},
 			{"type": "dir", "path": "docs/plans/sub"},
 		}
-		json.NewEncoder(w).Encode(entries)
+		if err := json.NewEncoder(w).Encode(entries); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	})
 
 	_, gc := newTestServer(t, mux)
@@ -116,7 +118,9 @@ func TestCreatePullRequest(t *testing.T) {
 			"html_url": "https://github.com/org/repo/pull/42",
 			"title":    "fix: gort auto-fix",
 		}
-		json.NewEncoder(w).Encode(pr)
+		if err := json.NewEncoder(w).Encode(pr); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	})
 
 	_, gc := newTestServer(t, mux)
