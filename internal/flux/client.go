@@ -103,7 +103,7 @@ func (c *client) GetManagedResources(ctx context.Context, name, namespace string
 // This is a pure function.
 func inventoryEntryToResource(entry kustomizev1.ResourceRef) gitops.ManagedResource {
 	// Parse the Flux ID: namespace_name_group_kind
-	parts := splitN(entry.ID, "_", 4)
+	parts := splitFluxID(entry.ID)
 	r := gitops.ManagedResource{Version: entry.Version}
 	if len(parts) == 4 {
 		r.Namespace = parts[0]
@@ -116,11 +116,32 @@ func inventoryEntryToResource(entry kustomizev1.ResourceRef) gitops.ManagedResou
 	return r
 }
 
-// splitN splits s by sep into at most n parts, similar to strings.SplitN
-// but handles the Flux ID format which may contain underscores in group names.
-func splitN(s, sep string, n int) []string {
-	result := strings.SplitN(s, sep, n)
-	return result
+// splitFluxID splits a Flux inventory ID "namespace_name_group_kind" into its
+// four components. It splits from the right so that underscores in the group
+// name are preserved correctly.
+func splitFluxID(s string) []string {
+	parts := make([]string, 0, 4)
+	// Take kind, then group from the right, leaving namespace_name.
+	for i := 0; i < 2; i++ {
+		idx := strings.LastIndex(s, "_")
+		if idx == -1 {
+			return strings.SplitN(s, "_", 4)
+		}
+		parts = append(parts, s[idx+1:])
+		s = s[:idx]
+	}
+	// Split the remainder into namespace and name (first underscore).
+	front := strings.SplitN(s, "_", 2)
+	if len(front) == 2 {
+		parts = append(parts, front[1], front[0])
+	} else {
+		parts = append(parts, "", front[0])
+	}
+	// Reverse to namespace, name, group, kind order.
+	for i, j := 0, len(parts)-1; i < j; i, j = i+1, j-1 {
+		parts[i], parts[j] = parts[j], parts[i]
+	}
+	return parts
 }
 
 // WatchReconciliation polls the Kustomization status until it is Ready or NotReady,
@@ -128,6 +149,9 @@ func splitN(s, sep string, n int) []string {
 func (c *client) WatchReconciliation(ctx context.Context, name, namespace string, timeout time.Duration) (*gitops.ReconciliationResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+
+	ticker := time.NewTicker(pollInterval)
+	defer ticker.Stop()
 
 	for {
 		status, err := c.GetReconciliationStatus(ctx, name, namespace)
@@ -150,7 +174,7 @@ func (c *client) WatchReconciliation(ctx context.Context, name, namespace string
 		select {
 		case <-ctx.Done():
 			return nil, fmt.Errorf("flux: watch reconciliation %s/%s: %w", namespace, name, ctx.Err())
-		case <-time.After(pollInterval):
+		case <-ticker.C:
 		}
 	}
 }

@@ -15,6 +15,7 @@ type PushEvent struct {
 }
 
 // FileChange describes a single file to be written in a commit.
+// Content must be valid UTF-8 text; binary files are not supported.
 type FileChange struct {
 	Path    string
 	Content []byte

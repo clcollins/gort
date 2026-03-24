@@ -102,12 +102,14 @@ func FilterByRepo(repo string, getRepo func(i int) string, count int) []int {
 type handler struct {
 	secret   string
 	dispatch DispatchFunc
+	appCtx   context.Context
 }
 
 // NewHandler returns an http.Handler that validates GitHub webhook requests and
-// calls dispatch for each valid push event.
-func NewHandler(secret string, dispatch DispatchFunc) http.Handler {
-	return &handler{secret: secret, dispatch: dispatch}
+// calls dispatch for each valid push event. appCtx is the application lifecycle
+// context, canceled on server shutdown.
+func NewHandler(secret string, dispatch DispatchFunc, appCtx context.Context) http.Handler {
+	return &handler{secret: secret, dispatch: dispatch, appCtx: appCtx}
 }
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -147,9 +149,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Dispatch is non-blocking from the HTTP handler's perspective; the reconciler
-	// runs in its own goroutine. Use context.WithoutCancel so the background work
-	// is not canceled when the HTTP request completes.
-	go h.dispatch(context.WithoutCancel(r.Context()), event)
+	// runs in its own goroutine. Use the application lifecycle context so background
+	// work is canceled on server shutdown but not on HTTP request completion.
+	go h.dispatch(h.appCtx, event)
 
 	metrics.WebhookRequestsTotal.WithLabelValues("success").Inc()
 	w.WriteHeader(http.StatusOK)

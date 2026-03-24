@@ -146,7 +146,7 @@ func TestHandler_ValidRequest(t *testing.T) {
 	dispatched := make(chan *vcs.PushEvent, 1)
 	handler := webhook.NewHandler(secret, func(_ context.Context, e *vcs.PushEvent) {
 		dispatched <- e
-	})
+	}, context.Background())
 
 	req := httptest.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
@@ -172,7 +172,7 @@ func TestHandler_ValidRequest(t *testing.T) {
 }
 
 func TestHandler_InvalidHMAC(t *testing.T) {
-	handler := webhook.NewHandler("secret", func(_ context.Context, _ *vcs.PushEvent) {})
+	handler := webhook.NewHandler("secret", func(_ context.Context, _ *vcs.PushEvent) {}, context.Background())
 	payload := pushPayload(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(payload))
@@ -193,7 +193,7 @@ func TestHandler_NonPushEvent(t *testing.T) {
 	called := false
 	handler := webhook.NewHandler(secret, func(_ context.Context, _ *vcs.PushEvent) {
 		called = true
-	})
+	}, context.Background())
 
 	req := httptest.NewRequest(http.MethodPost, "/webhook", bytes.NewReader(payload))
 	req.Header.Set("X-Hub-Signature-256", "sha256="+computeHMAC(t, payload, secret))
@@ -211,7 +211,7 @@ func TestHandler_NonPushEvent(t *testing.T) {
 }
 
 func TestHandler_WrongMethod(t *testing.T) {
-	handler := webhook.NewHandler("secret", func(_ context.Context, _ *vcs.PushEvent) {})
+	handler := webhook.NewHandler("secret", func(_ context.Context, _ *vcs.PushEvent) {}, context.Background())
 	req := httptest.NewRequest(http.MethodGet, "/webhook", nil)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)

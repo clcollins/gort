@@ -5,7 +5,9 @@ package reconciler
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -21,6 +23,7 @@ type Input struct {
 	Namespace   string
 	TargetRepo  string
 	FixRepo     string
+	BaseBranch  string
 	DocsPaths   []string
 	Timeout     time.Duration
 }
@@ -54,16 +57,23 @@ func (r *reconciler) Reconcile(ctx context.Context, in Input) (*vcs.PullRequest,
 	if timeout == 0 {
 		timeout = 10 * time.Minute
 	}
+	if in.BaseBranch == "" {
+		in.BaseBranch = "main"
+	}
 
 	start := time.Now()
 	result, err := r.gitops.WatchReconciliation(ctx, in.WatcherName, in.Namespace, timeout)
 	metrics.ReconcileDurationSeconds.WithLabelValues(in.WatcherName).Observe(time.Since(start).Seconds())
 	if err != nil {
-		metrics.ReconcilePollsTotal.WithLabelValues(in.WatcherName, "timeout").Inc()
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			metrics.ReconcilePollsTotal.WithLabelValues(in.WatcherName, "timeout").Inc()
+		} else {
+			metrics.ReconcilePollsTotal.WithLabelValues(in.WatcherName, "error").Inc()
+		}
 		return nil, fmt.Errorf("reconciler: watch %s: %w", in.WatcherName, err)
 	}
 
-	planDocs, err := r.fetchPlanDocuments(ctx, in.TargetRepo, in.DocsPaths)
+	planDocs, err := r.fetchPlanDocuments(ctx, in.TargetRepo, in.BaseBranch, in.DocsPaths)
 	if err != nil {
 		// Non-fatal: proceed without plan docs.
 		planDocs = nil
@@ -85,8 +95,8 @@ func (r *reconciler) Reconcile(ctx context.Context, in Input) (*vcs.PullRequest,
 	// Flux succeeded — validate the running environment matches intent.
 	runtimeState, err := r.gitops.GetRuntimeState(ctx, in.WatcherName, in.Namespace)
 	if err != nil {
-		// Non-fatal: skip intent validation.
-		return nil, nil
+		metrics.IntentValidationTotal.WithLabelValues(in.WatcherName, "error").Inc()
+		return nil, fmt.Errorf("reconciler: get runtime state %s: %w", in.WatcherName, err)
 	}
 
 	intentResult, err := r.ai.ValidateIntent(ctx, ai.IntentValidationRequest{
@@ -134,8 +144,7 @@ func (r *reconciler) openFixPR(ctx context.Context, in Input, reason, summary, f
 
 	branch := BuildBranchName(reason, in.WatcherName)
 
-	// Get the base SHA from main.
-	if err := r.vcs.CreateBranch(ctx, in.FixRepo, branch, "main"); err != nil {
+	if err := r.vcs.CreateBranch(ctx, in.FixRepo, branch, in.BaseBranch); err != nil {
 		return nil, fmt.Errorf("reconciler: create branch %s: %w", branch, err)
 	}
 
@@ -164,7 +173,7 @@ func (r *reconciler) openFixPR(ctx context.Context, in Input, reason, summary, f
 		Title: prTitle,
 		Body:  BuildPRBody(reason, in.WatcherName, summary, fixPlan),
 		Head:  branch,
-		Base:  "main",
+		Base:  in.BaseBranch,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("reconciler: create PR: %w", err)
@@ -173,7 +182,7 @@ func (r *reconciler) openFixPR(ctx context.Context, in Input, reason, summary, f
 }
 
 // fetchPlanDocuments reads all markdown files from the configured docs paths in the repo.
-func (r *reconciler) fetchPlanDocuments(ctx context.Context, repo string, docsPaths []string) ([]ai.PlanDocument, error) {
+func (r *reconciler) fetchPlanDocuments(ctx context.Context, repo, baseBranch string, docsPaths []string) ([]ai.PlanDocument, error) {
 	if repo == "" {
 		return nil, nil
 	}
@@ -184,7 +193,7 @@ func (r *reconciler) fetchPlanDocuments(ctx context.Context, repo string, docsPa
 
 	var docs []ai.PlanDocument
 	for _, dir := range paths {
-		entries, err := r.vcs.ListDirectory(ctx, repo, strings.TrimRight(dir, "/"), "main")
+		entries, err := r.vcs.ListDirectory(ctx, repo, strings.TrimRight(dir, "/"), baseBranch)
 		if err != nil {
 			continue
 		}
@@ -192,7 +201,7 @@ func (r *reconciler) fetchPlanDocuments(ctx context.Context, repo string, docsPa
 			if !strings.HasSuffix(path, ".md") {
 				continue
 			}
-			content, err := r.vcs.GetFileContents(ctx, repo, path, "main")
+			content, err := r.vcs.GetFileContents(ctx, repo, path, baseBranch)
 			if err != nil {
 				continue
 			}
@@ -202,13 +211,22 @@ func (r *reconciler) fetchPlanDocuments(ctx context.Context, repo string, docsPa
 	return docs, nil
 }
 
+// invalidRefChars matches characters that are invalid in git ref names.
+var invalidRefChars = regexp.MustCompile(`[^a-zA-Z0-9/_.-]`)
+
 // BuildBranchName creates a URL-safe branch name with a nanosecond timestamp.
 func BuildBranchName(reason, watcherName string) string {
 	ts := time.Now().UTC().Format("20060102-150405.000000000")
-	name := fmt.Sprintf("gort/%s/%s/%s", reason, watcherName, ts)
-	// Replace characters unsafe in git branch names.
-	name = strings.ReplaceAll(name, " ", "-")
+	name := fmt.Sprintf("gort/%s/%s/%s", reason, sanitizeRef(watcherName), ts)
 	return name
+}
+
+// sanitizeRef normalizes a string for use in a git ref name.
+func sanitizeRef(s string) string {
+	s = strings.ToLower(s)
+	s = invalidRefChars.ReplaceAllString(s, "-")
+	s = strings.Trim(s, "-.")
+	return s
 }
 
 // BuildPRBody constructs the pull request body markdown. Pure function.

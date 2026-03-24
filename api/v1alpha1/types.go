@@ -42,8 +42,8 @@ type GitOpsWatcherStatus struct {
 	// +optional
 	LastReconcileTime *metav1.Time `json:"lastReconcileTime,omitempty"`
 
-	// LastResult is the outcome of the last reconciliation: "success", "flux_failure",
-	// "intent_not_met", "timeout", or "error".
+	// LastResult is the outcome of the last reconciliation: "success", "fix_pr_opened",
+	// or "error".
 	// +optional
 	LastResult string `json:"lastResult,omitempty"`
 

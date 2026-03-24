@@ -22,7 +22,7 @@ type Client interface {
 	// GetEvents returns Kubernetes events in the given namespace.
 	GetEvents(ctx context.Context, namespace string) ([]corev1.Event, error)
 
-	// UpdateStatus patches the status subresource of the given object.
+	// UpdateStatus updates the status subresource of the given object.
 	UpdateStatus(ctx context.Context, obj ctrlclient.Object) error
 }
 

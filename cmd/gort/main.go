@@ -92,6 +92,10 @@ func run() error {
 	// Build reconciler.
 	rec := reconciler.New(gitopsClient, vcsClient, aiClient)
 
+	// Application lifecycle context, canceled on SIGTERM/SIGINT.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
+	defer stop()
+
 	// Webhook dispatch: look up GitOpsWatcher CRDs, reconcile each matching one.
 	dispatch := func(ctx context.Context, event *vcs.PushEvent) {
 		if event.Branch != "main" {
@@ -144,7 +148,7 @@ func run() error {
 
 	// webhookMux handles inbound GitHub webhook traffic only.
 	webhookMux := http.NewServeMux()
-	webhookMux.Handle("/webhook", webhook.NewHandler(cfg.webhookSecret, dispatch))
+	webhookMux.Handle("/webhook", webhook.NewHandler(cfg.webhookSecret, dispatch, ctx))
 
 	// metricsMux exposes Prometheus metrics and Kubernetes health probes on a
 	// dedicated port so that scrape traffic is independent of webhook ingress.
@@ -171,9 +175,6 @@ func run() error {
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
-	defer stop()
 
 	go func() {
 		slog.Info("starting webhook server", "addr", cfg.listenAddr)
