@@ -67,7 +67,7 @@ func TestGetEvents(t *testing.T) {
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(event).Build()
 	c := k8s.NewClient(fakeClient)
 
-	events, err := c.GetEvents(context.Background(), "default", "")
+	events, err := c.GetEvents(context.Background(), "default")
 	if err != nil {
 		t.Fatalf("GetEvents: %v", err)
 	}

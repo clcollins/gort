@@ -94,3 +94,5 @@ jobs:
 
       - name: Build container image
         run: make image-build
+        env:
+          CONTAINER_SUBSYS: docker

@@ -19,9 +19,8 @@ type Client interface {
 	// List retrieves all objects of the list type in the given namespace.
 	List(ctx context.Context, list ctrlclient.ObjectList, namespace string) error
 
-	// GetEvents returns Kubernetes events in the given namespace, optionally filtered by
-	// a comma-separated field selector (e.g. "involvedObject.name=my-pod").
-	GetEvents(ctx context.Context, namespace, fieldSelector string) ([]corev1.Event, error)
+	// GetEvents returns Kubernetes events in the given namespace.
+	GetEvents(ctx context.Context, namespace string) ([]corev1.Event, error)
 
 	// UpdateStatus patches the status subresource of the given object.
 	UpdateStatus(ctx context.Context, obj ctrlclient.Object) error
@@ -55,12 +54,9 @@ func (c *client) List(ctx context.Context, list ctrlclient.ObjectList, namespace
 	return nil
 }
 
-func (c *client) GetEvents(ctx context.Context, namespace, fieldSelector string) ([]corev1.Event, error) {
+func (c *client) GetEvents(ctx context.Context, namespace string) ([]corev1.Event, error) {
 	list := &corev1.EventList{}
 	opts := []ctrlclient.ListOption{ctrlclient.InNamespace(namespace)}
-	if fieldSelector != "" {
-		opts = append(opts, ctrlclient.MatchingFields{"metadata.name": fieldSelector})
-	}
 	if err := c.inner.List(ctx, list, opts...); err != nil {
 		return nil, fmt.Errorf("k8s list events in %q: %w", namespace, err)
 	}

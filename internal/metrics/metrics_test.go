@@ -5,10 +5,12 @@ import (
 
 	"github.com/clcollins/gort/internal/metrics"
 	"github.com/prometheus/client_golang/prometheus"
-	dto "github.com/prometheus/client_model/go"
 )
 
-func collectMetric(t *testing.T, c prometheus.Collector) *dto.MetricFamily {
+// collectMetric verifies that Collect and Describe do not panic.
+// CounterVec/HistogramVec yield zero metrics until a label set is created,
+// so we do not assert count > 0 here.
+func collectMetric(t *testing.T, c prometheus.Collector) {
 	t.Helper()
 	ch := make(chan prometheus.Metric, 10)
 	c.Collect(ch)
@@ -17,13 +19,6 @@ func collectMetric(t *testing.T, c prometheus.Collector) *dto.MetricFamily {
 	desc := make(chan *prometheus.Desc, 10)
 	c.Describe(desc)
 	close(desc)
-
-	// Just verify Collect doesn't panic and returns at least one metric.
-	count := 0
-	for range ch {
-		count++
-	}
-	return nil
 }
 
 func TestWebhookRequestsTotal_Registered(t *testing.T) {

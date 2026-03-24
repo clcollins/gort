@@ -14,7 +14,6 @@ import (
 
 	"github.com/clcollins/gort/internal/metrics"
 	"github.com/clcollins/gort/pkg/ai"
-	"github.com/clcollins/gort/pkg/gitops"
 )
 
 const (
@@ -260,7 +259,8 @@ func parseAnalysisResponse(text string) *ai.AnalysisResult {
 			result.FixPlan = strings.TrimSpace(strings.TrimPrefix(line, "FIX_PLAN:"))
 		case strings.HasPrefix(line, "FILES:"):
 			// next lines are file path / content pairs
-		case !inFile && currentPath == "" && strings.HasSuffix(line, ".yaml") || strings.HasSuffix(line, ".md"):
+		case !inFile && currentPath == "" &&
+			(strings.HasSuffix(strings.TrimSpace(line), ".yaml") || strings.HasSuffix(strings.TrimSpace(line), ".md")):
 			currentPath = strings.TrimSpace(line)
 		case line == "---" && currentPath != "" && !inFile:
 			inFile = true
@@ -321,4 +321,3 @@ func parseIntentResponse(text string) *ai.IntentValidationResult {
 	}
 	return result
 }
-

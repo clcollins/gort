@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/clcollins/gort/internal/metrics"
 	"github.com/clcollins/gort/pkg/vcs"
 )
 
@@ -111,18 +112,21 @@ func NewHandler(secret string, dispatch DispatchFunc) http.Handler {
 
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
+		metrics.WebhookRequestsTotal.WithLabelValues("invalid").Inc()
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
 	body, err := io.ReadAll(io.LimitReader(r.Body, 10<<20)) // 10 MB limit
 	if err != nil {
+		metrics.WebhookRequestsTotal.WithLabelValues("error").Inc()
 		http.Error(w, "cannot read body", http.StatusBadRequest)
 		return
 	}
 
 	sig := r.Header.Get("X-Hub-Signature-256")
 	if err := ValidateHMAC(body, sig, h.secret); err != nil {
+		metrics.WebhookRequestsTotal.WithLabelValues("invalid").Inc()
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -130,19 +134,23 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	eventType := r.Header.Get("X-GitHub-Event")
 	if eventType != "push" {
 		// Acknowledge non-push events (e.g. ping) without dispatching.
+		metrics.WebhookRequestsTotal.WithLabelValues("success").Inc()
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
 	event, err := ParseWebhookPayload(body)
 	if err != nil {
+		metrics.WebhookRequestsTotal.WithLabelValues("error").Inc()
 		http.Error(w, "bad payload", http.StatusBadRequest)
 		return
 	}
 
 	// Dispatch is non-blocking from the HTTP handler's perspective; the reconciler
-	// runs in its own goroutine.
-	go h.dispatch(r.Context(), event)
+	// runs in its own goroutine. Use context.WithoutCancel so the background work
+	// is not canceled when the HTTP request completes.
+	go h.dispatch(context.WithoutCancel(r.Context()), event)
 
+	metrics.WebhookRequestsTotal.WithLabelValues("success").Inc()
 	w.WriteHeader(http.StatusOK)
 }

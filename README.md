@@ -95,7 +95,7 @@ GORT follows the same convention when opening fix PRs on target repos.
 ### Prerequisites
 
 - Go 1.24+
-- Podman (or set `CONTAINER_ENGINE=docker`)
+- Podman (or set `CONTAINER_SUBSYS=docker`)
 - `markdownlint-cli2` (for markdown linting)
 
 ### Quick Start
@@ -114,7 +114,7 @@ make build
 make image-build
 
 # Build with docker instead
-CONTAINER_ENGINE=docker make image-build
+CONTAINER_SUBSYS=docker make image-build
 
 # Generate CRD manifests
 make manifests

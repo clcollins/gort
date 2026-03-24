@@ -102,18 +102,59 @@ func (c *client) CommitFiles(ctx context.Context, repo, branch, message string, 
 	if err != nil {
 		return err
 	}
-	// Create each file via the contents API (simple single-file commit per change).
-	for _, f := range files {
-		opts := &gogithub.RepositoryContentFileOptions{
-			Message: gogithub.Ptr(message),
-			Content: f.Content,
-			Branch:  gogithub.Ptr(branch),
-		}
-		if _, _, apiErr := c.gh.Repositories.CreateFile(ctx, owner, name, f.Path, opts); apiErr != nil {
-			metrics.VCSRequestsTotal.WithLabelValues("commit_file", "error").Inc()
-			return fmt.Errorf("github: commit file %s: %w", f.Path, apiErr)
-		}
+
+	// Get the current commit SHA for the branch.
+	ref, _, apiErr := c.gh.Git.GetRef(ctx, owner, name, "refs/heads/"+branch)
+	if apiErr != nil {
+		metrics.VCSRequestsTotal.WithLabelValues("commit_files", "error").Inc()
+		return fmt.Errorf("github: get ref %s: %w", branch, apiErr)
 	}
+	baseSHA := ref.Object.GetSHA()
+
+	// Get the tree SHA from the base commit.
+	baseCommit, _, apiErr := c.gh.Git.GetCommit(ctx, owner, name, baseSHA)
+	if apiErr != nil {
+		metrics.VCSRequestsTotal.WithLabelValues("commit_files", "error").Inc()
+		return fmt.Errorf("github: get commit %s: %w", baseSHA, apiErr)
+	}
+	baseTreeSHA := baseCommit.Tree.GetSHA()
+
+	// Build tree entries for all files.
+	var entries []*gogithub.TreeEntry
+	for _, f := range files {
+		entries = append(entries, &gogithub.TreeEntry{
+			Path:    gogithub.Ptr(f.Path),
+			Mode:    gogithub.Ptr("100644"),
+			Type:    gogithub.Ptr("blob"),
+			Content: gogithub.Ptr(string(f.Content)),
+		})
+	}
+
+	// Create a new tree with the file changes.
+	tree, _, apiErr := c.gh.Git.CreateTree(ctx, owner, name, baseTreeSHA, entries)
+	if apiErr != nil {
+		metrics.VCSRequestsTotal.WithLabelValues("commit_files", "error").Inc()
+		return fmt.Errorf("github: create tree: %w", apiErr)
+	}
+
+	// Create a commit pointing to the new tree.
+	commit, _, apiErr := c.gh.Git.CreateCommit(ctx, owner, name, &gogithub.Commit{
+		Message: gogithub.Ptr(message),
+		Tree:    tree,
+		Parents: []*gogithub.Commit{{SHA: gogithub.Ptr(baseSHA)}},
+	}, nil)
+	if apiErr != nil {
+		metrics.VCSRequestsTotal.WithLabelValues("commit_files", "error").Inc()
+		return fmt.Errorf("github: create commit: %w", apiErr)
+	}
+
+	// Update the branch ref to point to the new commit.
+	ref.Object.SHA = commit.SHA
+	if _, _, apiErr = c.gh.Git.UpdateRef(ctx, owner, name, ref, false); apiErr != nil {
+		metrics.VCSRequestsTotal.WithLabelValues("commit_files", "error").Inc()
+		return fmt.Errorf("github: update ref %s: %w", branch, apiErr)
+	}
+
 	metrics.VCSRequestsTotal.WithLabelValues("commit_files", "success").Inc()
 	return nil
 }

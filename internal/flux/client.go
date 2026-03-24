@@ -64,7 +64,7 @@ func kustomizationStatus(ks *kustomizev1.Kustomization) *gitops.ReconciliationSt
 // GetFailureLogs retrieves Kubernetes events associated with the Flux Kustomization.
 // Pod log retrieval is best-effort; errors fetching individual pod logs are non-fatal.
 func (c *client) GetFailureLogs(ctx context.Context, name, namespace string) ([]gitops.LogEntry, error) {
-	events, err := c.k8s.GetEvents(ctx, namespace, "")
+	events, err := c.k8s.GetEvents(ctx, namespace)
 	if err != nil {
 		return nil, fmt.Errorf("flux: get events for %s/%s: %w", namespace, name, err)
 	}
@@ -166,8 +166,9 @@ func isTerminalReason(reason string) bool {
 	return false
 }
 
-// GetRuntimeState collects the live pod, deployment, event, and endpoint state
+// GetRuntimeState collects the live pod, deployment, and event state
 // for all resources labelled with the Flux Kustomization name.
+// Endpoint collection is not yet implemented.
 func (c *client) GetRuntimeState(ctx context.Context, name, namespace string) (*gitops.RuntimeState, error) {
 	state := &gitops.RuntimeState{}
 
@@ -196,7 +197,7 @@ func (c *client) GetRuntimeState(ctx context.Context, name, namespace string) (*
 	}
 
 	// Events from the GitOps namespace.
-	events, err := c.k8s.GetEvents(ctx, namespace, "")
+	events, err := c.k8s.GetEvents(ctx, namespace)
 	if err != nil {
 		return nil, fmt.Errorf("flux: list events: %w", err)
 	}

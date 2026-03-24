@@ -1,7 +1,7 @@
 # GORT — GitOps Reconciliation Tool
-# All container operations use $(CONTAINER_ENGINE), defaulting to podman.
+# All container operations use $(CONTAINER_SUBSYS), defaulting to podman.
 
-CONTAINER_ENGINE ?= podman
+CONTAINER_SUBSYS ?= podman
 IMAGE_REGISTRY   ?= quay.io/chcollin
 IMAGE_REPO       ?= $(IMAGE_REGISTRY)/gort
 VERSION          ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -89,12 +89,12 @@ manifests: $(CONTROLLER_GEN) ## Generate CRD manifests
 # ── Container Image ────────────────────────────────────────────────────────────
 
 .PHONY: image-build
-image-build: ## Build the container image using $(CONTAINER_ENGINE)
-	$(CONTAINER_ENGINE) build -t $(IMAGE_TAG) -f Containerfile .
+image-build: ## Build the container image using $(CONTAINER_SUBSYS)
+	$(CONTAINER_SUBSYS) build -t $(IMAGE_TAG) -f Containerfile .
 
 .PHONY: image-push
-image-push: ## Push the container image using $(CONTAINER_ENGINE)
-	$(CONTAINER_ENGINE) push $(IMAGE_TAG)
+image-push: ## Push the container image using $(CONTAINER_SUBSYS)
+	$(CONTAINER_SUBSYS) push $(IMAGE_TAG)
 
 # ── Local CI ───────────────────────────────────────────────────────────────────
 
@@ -103,11 +103,11 @@ ci-all: tidy-check fmt vet cover lint docs-check markdown-lint makefile-lint ima
 
 .PHONY: ci-container
 ci-container: ## Run all CI checks inside ubuntu:latest (mirrors GitHub Actions ubuntu-latest environment)
-	$(CONTAINER_ENGINE) run --rm \
+	$(CONTAINER_SUBSYS) run --rm \
 		-v "$(CURDIR):/workspace:z" \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /workspace \
-		-e CONTAINER_ENGINE=docker \
+		-e CONTAINER_SUBSYS=docker \
 		ubuntu:latest \
 		bash -c "apt-get update -q && \
 			apt-get install -y -q --no-install-recommends wget tar git make nodejs npm docker.io && \

@@ -17,6 +17,7 @@ import (
 	"golang.org/x/oauth2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
@@ -115,14 +116,23 @@ func run() error {
 					DocsPaths:   w.Spec.DocsPaths,
 					Timeout:     timeout,
 				})
+
+				// Update the GitOpsWatcher status so results are visible via kubectl/oc.
+				now := metav1.Now()
+				w.Status.LastReconcileTime = &now
 				if err != nil {
 					slog.Error("reconcile", "watcher", w.Name, "err", err)
-					return
-				}
-				if pr != nil {
+					w.Status.LastResult = "error"
+				} else if pr != nil {
 					slog.Info("fix PR opened", "watcher", w.Name, "pr", pr.URL)
+					w.Status.LastResult = "fix_pr_opened"
+					w.Status.LastFixPRURL = pr.URL
 				} else {
 					slog.Info("reconcile complete, no action needed", "watcher", w.Name)
+					w.Status.LastResult = "success"
+				}
+				if statusErr := rawClient.Status().Update(ctx, &w); statusErr != nil {
+					slog.Error("update watcher status", "watcher", w.Name, "err", statusErr)
 				}
 			}()
 		}

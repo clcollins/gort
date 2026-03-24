@@ -148,7 +148,7 @@ func (r *reconciler) openFixPR(ctx context.Context, in Input, reason, summary, f
 		})
 	}
 	// Add a GORT plan document to the fix PR.
-	planPath := fmt.Sprintf("docs/plans/gort-fix-%d.md", time.Now().Unix())
+	planPath := fmt.Sprintf("docs/plans/gort-fix-%d.md", time.Now().UnixNano())
 	fileChanges = append(fileChanges, vcs.FileChange{
 		Path:    planPath,
 		Content: []byte(buildGORTPlanDoc(reason, summary, fixPlan)),
@@ -204,7 +204,7 @@ func (r *reconciler) fetchPlanDocuments(ctx context.Context, repo string, docsPa
 
 // BuildBranchName creates a deterministic, URL-safe branch name. Pure function.
 func BuildBranchName(reason, watcherName string) string {
-	ts := time.Now().UTC().Format("20060102-150405")
+	ts := time.Now().UTC().Format("20060102-150405.000000000")
 	name := fmt.Sprintf("gort/%s/%s/%s", reason, watcherName, ts)
 	// Replace characters unsafe in git branch names.
 	name = strings.ReplaceAll(name, " ", "-")
