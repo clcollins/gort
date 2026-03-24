@@ -23,7 +23,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	gortv1alpha1 "github.com/clcollins/gort/api/v1alpha1"
+	"github.com/clcollins/gort/pkg/ai"
 	"github.com/clcollins/gort/internal/claudeai"
+	"github.com/clcollins/gort/internal/copilot"
 	"github.com/clcollins/gort/internal/flux"
 	githubclient "github.com/clcollins/gort/internal/github"
 	internalk8s "github.com/clcollins/gort/internal/k8s"
@@ -86,8 +88,14 @@ func run() error {
 	gc := gogithub.NewClient(tc)
 	vcsClient := githubclient.NewClient(gc, cfg.webhookSecret)
 
-	// Build AI (Claude) client.
-	aiClient := claudeai.NewClient(cfg.claudeAPIKey, cfg.claudeModel)
+	// Build AI client based on configured provider.
+	var aiClient ai.Client
+	switch cfg.aiProvider {
+	case "claude":
+		aiClient = claudeai.NewClient(cfg.claudeAPIKey, cfg.claudeModel)
+	case "copilot":
+		aiClient = copilot.NewClient(cfg.copilotToken, cfg.copilotModel)
+	}
 
 	// Build reconciler.
 	rec := reconciler.New(gitopsClient, vcsClient, aiClient)
@@ -207,19 +215,33 @@ type appConfig struct {
 	metricsAddr   string
 	webhookSecret string
 	githubToken   string
+	aiProvider    string
 	claudeAPIKey  string
 	claudeModel   string
+	copilotToken  string
+	copilotModel  string
 }
 
 func loadConfig() appConfig {
 	cfg := appConfig{
-		listenAddr:  getEnv("GORT_LISTEN_ADDR", ":8080"),
-		metricsAddr: getEnv("GORT_METRICS_ADDR", ":8081"),
-		claudeModel: getEnv("GORT_CLAUDE_MODEL", "claude-sonnet-4-6"),
+		listenAddr:   getEnv("GORT_LISTEN_ADDR", ":8080"),
+		metricsAddr:  getEnv("GORT_METRICS_ADDR", ":8081"),
+		aiProvider:   getEnv("GORT_AI_PROVIDER", "claude"),
+		claudeModel:  getEnv("GORT_CLAUDE_MODEL", "claude-sonnet-4-6"),
+		copilotModel: getEnv("GORT_COPILOT_MODEL", "gpt-4o"),
 	}
 	cfg.webhookSecret = mustEnv("GORT_WEBHOOK_SECRET")
 	cfg.githubToken = mustEnv("GORT_GITHUB_TOKEN")
-	cfg.claudeAPIKey = mustEnv("GORT_CLAUDE_API_KEY")
+
+	switch cfg.aiProvider {
+	case "claude":
+		cfg.claudeAPIKey = mustEnv("GORT_CLAUDE_API_KEY")
+	case "copilot":
+		cfg.copilotToken = getEnv("GORT_COPILOT_TOKEN", cfg.githubToken)
+	default:
+		slog.Error("unsupported AI provider", "provider", cfg.aiProvider)
+		os.Exit(1)
+	}
 	return cfg
 }
 
