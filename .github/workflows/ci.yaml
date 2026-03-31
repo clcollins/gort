@@ -89,10 +89,30 @@ jobs:
   image-build:
     name: Container image build
     runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: quay.io/clcollins/gort
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
       - name: Build container image
-        run: make image-build
-        env:
-          CONTAINER_SUBSYS: docker
+        run: |
+          podman build -f Containerfile \
+            --build-arg BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
+            --build-arg VCS_REF=$(git rev-parse HEAD) \
+            --build-arg VERSION=ci \
+            -t ${{ env.IMAGE_NAME }}:ci .
+
+      - name: Validate OCI labels
+        run: |
+          echo "Checking OCI labels..."
+          podman inspect ${{ env.IMAGE_NAME }}:ci --format '{{index .Config.Labels "org.opencontainers.image.title"}}' | grep -q "gort"
+          podman inspect ${{ env.IMAGE_NAME }}:ci --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' | grep -q "$(git rev-parse HEAD)"
+          podman inspect ${{ env.IMAGE_NAME }}:ci --format '{{index .Config.Labels "org.opencontainers.image.version"}}' | grep -q "ci"
+          podman inspect ${{ env.IMAGE_NAME }}:ci --format '{{index .Config.Labels "is.collins.cluster.build.commit.id"}}' | grep -q "$(git rev-parse HEAD)"
+          podman inspect ${{ env.IMAGE_NAME }}:ci --format '{{index .Config.Labels "io.k8s.display-name"}}' | grep -q "gort"
+          echo "All OCI labels validated successfully."
