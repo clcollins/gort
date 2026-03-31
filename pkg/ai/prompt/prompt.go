@@ -101,18 +101,18 @@ func ParseAnalysisResponse(text string) *ai.AnalysisResult {
 		trimmed := strings.TrimSpace(line)
 
 		switch {
-		case strings.HasPrefix(line, "SUMMARY:"):
-			result.Summary = strings.TrimSpace(strings.TrimPrefix(line, "SUMMARY:"))
-		case strings.HasPrefix(line, "FIX_PLAN:"):
-			result.FixPlan = strings.TrimSpace(strings.TrimPrefix(line, "FIX_PLAN:"))
-		case strings.HasPrefix(line, "FILES:"):
+		case strings.HasPrefix(trimmed, "SUMMARY:"):
+			result.Summary = strings.TrimSpace(strings.TrimPrefix(trimmed, "SUMMARY:"))
+		case strings.HasPrefix(trimmed, "FIX_PLAN:"):
+			result.FixPlan = strings.TrimSpace(strings.TrimPrefix(trimmed, "FIX_PLAN:"))
+		case strings.HasPrefix(trimmed, "FILES:"):
 			inFilesSection = true
 			expectingPath = true
 			inFile = false
 			currentPath = ""
 			fileContent.Reset()
 		case inFilesSection && expectingPath && !inFile:
-			if trimmed == "" {
+			if trimmed == "" || trimmed == "---" {
 				continue
 			}
 			currentPath = trimmed
@@ -155,11 +155,11 @@ func ParseIntentResponse(text string) *ai.IntentValidationResult {
 		trimmed := strings.TrimSpace(line)
 
 		switch {
-		case strings.HasPrefix(line, "INTENT_MET:"):
-			val := strings.TrimSpace(strings.TrimPrefix(line, "INTENT_MET:"))
+		case strings.HasPrefix(trimmed, "INTENT_MET:"):
+			val := strings.TrimSpace(strings.TrimPrefix(trimmed, "INTENT_MET:"))
 			result.Met = strings.EqualFold(val, "true")
-		case strings.HasPrefix(line, "ISSUES:"):
-			issues := strings.TrimSpace(strings.TrimPrefix(line, "ISSUES:"))
+		case strings.HasPrefix(trimmed, "ISSUES:"):
+			issues := strings.TrimSpace(strings.TrimPrefix(trimmed, "ISSUES:"))
 			if issues != "" && !strings.EqualFold(issues, "none") {
 				for _, issue := range strings.Split(issues, ",") {
 					if t := strings.TrimSpace(issue); t != "" {
@@ -167,8 +167,8 @@ func ParseIntentResponse(text string) *ai.IntentValidationResult {
 					}
 				}
 			}
-		case strings.HasPrefix(line, "FIX_PLAN:"):
-			result.FixPlan = strings.TrimSpace(strings.TrimPrefix(line, "FIX_PLAN:"))
+		case strings.HasPrefix(trimmed, "FIX_PLAN:"):
+			result.FixPlan = strings.TrimSpace(strings.TrimPrefix(trimmed, "FIX_PLAN:"))
 		case strings.HasPrefix(trimmed, "FILES:"):
 			inFilesSection = true
 			expectingPath = true
@@ -176,7 +176,7 @@ func ParseIntentResponse(text string) *ai.IntentValidationResult {
 			currentPath = ""
 			fileContent.Reset()
 		case inFilesSection && expectingPath && !inFile:
-			if trimmed == "" {
+			if trimmed == "" || trimmed == "---" {
 				continue
 			}
 			currentPath = trimmed
