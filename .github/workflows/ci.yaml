@@ -190,4 +190,4 @@ jobs:
           echo "All OCI labels validated successfully."
 
       - name: Validate image runs
-        run: podman run --rm ${{ env.IMAGE_NAME }}:ci
+        run: podman run --rm ${{ env.IMAGE_NAME }}:ci --help
