@@ -20,9 +20,9 @@ RUN CGO_ENABLED=0 GOOS=linux \
 # Stage 2: runtime — UBI9 minimal (no shell, no package manager, smallest attack surface)
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 
-ARG BUILD_DATE="1970-01-01T00:00:00Z"
-ARG VCS_REF="unknown"
-ARG VERSION="dev"
+ARG BUILD_DATE=1970-01-01T00:00:00Z
+ARG VCS_REF=unknown
+ARG VERSION=dev
 
 LABEL org.opencontainers.image.title="gort" \
       org.opencontainers.image.description="GORT - GitOps Reconciliation Tool" \

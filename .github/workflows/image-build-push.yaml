@@ -100,8 +100,8 @@ jobs:
             "containers-storage:${FULL_IMAGE}:${SHORT_SHA}-arm64"
 
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "Pull request build - manifest created and tagged locally; skipping registry push."
-            echo "Local tags applied: ${TAGS}"
+            echo "Pull request build - multi-arch manifest created locally as ${FULL_IMAGE}:${SHORT_SHA}; skipping registry push and additional tags."
+            echo "Planned registry tags (not applied in pull_request builds): ${TAGS}"
             podman images --filter "reference=${FULL_IMAGE}" --format "{{.Repository}}:{{.Tag}}"
             exit 0
           fi
