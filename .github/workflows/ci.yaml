@@ -90,7 +90,7 @@ jobs:
     name: Container image build
     runs-on: ubuntu-latest
     env:
-      IMAGE_NAME: quay.io/clcollins/gort
+      IMAGE_NAME: quay.io/chcollin/gort
     steps:
       - uses: actions/checkout@v4
 
