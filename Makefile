@@ -67,6 +67,18 @@ markdown-lint: ## Lint all markdown files with markdownlint-cli2
 makefile-lint: $(CHECKMAKE) ## Lint this Makefile with checkmake
 	$(CHECKMAKE) Makefile
 
+.PHONY: yaml-lint
+yaml-lint: ## Lint YAML files in config/
+	yamllint -c .yamllint.yaml config/
+
+.PHONY: promrules-check
+promrules-check: ## Validate Prometheus alerting rules with promtool
+	bash .github/scripts/validate-prometheus-rules.sh
+
+.PHONY: containerfile-check
+containerfile-check: ## Check Containerfile base image tags and registries
+	bash .github/scripts/check-containerfile-tags.sh
+
 # ── Documentation Check ────────────────────────────────────────────────────────
 
 .PHONY: docs-check
@@ -99,7 +111,7 @@ image-push: ## Push the container image using $(CONTAINER_SUBSYS)
 # ── Local CI ───────────────────────────────────────────────────────────────────
 
 .PHONY: ci-all
-ci-all: tidy-check fmt vet cover lint docs-check markdown-lint makefile-lint image-build ## Run all CI checks locally (mirrors .github/workflows/ci.yaml)
+ci-all: tidy-check fmt vet cover lint build docs-check markdown-lint yaml-lint makefile-lint promrules-check containerfile-check image-build ## Run all CI checks locally (mirrors .github/workflows/ci.yaml)
 
 .PHONY: ci-container
 ci-container: ## Run all CI checks inside ubuntu:latest (mirrors GitHub Actions ubuntu-latest environment)

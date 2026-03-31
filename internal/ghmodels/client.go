@@ -108,7 +108,7 @@ func (c *client) callChat(ctx context.Context, userPrompt string) (string, error
 	if err != nil {
 		return "", fmt.Errorf("ghmodels: http: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {

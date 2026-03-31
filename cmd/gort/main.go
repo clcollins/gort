@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -40,6 +41,31 @@ import (
 var version string
 
 func main() {
+	showVersion := flag.Bool("version", false, "Print version and exit")
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "GORT — GitOps Reconciliation Tool\n\n")
+		fmt.Fprintf(os.Stderr, "Usage: gort [flags]\n\n")
+		fmt.Fprintf(os.Stderr, "Flags:\n")
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nRequired environment variables:\n")
+		fmt.Fprintf(os.Stderr, "  GORT_WEBHOOK_SECRET    GitHub webhook secret\n")
+		fmt.Fprintf(os.Stderr, "  GORT_GITHUB_TOKEN      GitHub personal access token\n")
+		fmt.Fprintf(os.Stderr, "  GORT_CLAUDE_API_KEY    Claude API key (when AI provider is claude)\n")
+		fmt.Fprintf(os.Stderr, "\nOptional environment variables:\n")
+		fmt.Fprintf(os.Stderr, "  GORT_LISTEN_ADDR             Webhook listen address (default :8080)\n")
+		fmt.Fprintf(os.Stderr, "  GORT_METRICS_ADDR            Metrics listen address (default :8081)\n")
+		fmt.Fprintf(os.Stderr, "  GORT_AI_PROVIDER             AI provider: claude or github-models (default claude)\n")
+		fmt.Fprintf(os.Stderr, "  GORT_CLAUDE_MODEL            Claude model name (default claude-sonnet-4-6)\n")
+		fmt.Fprintf(os.Stderr, "  GORT_GITHUB_MODELS_TOKEN     GitHub Models API token (defaults to GORT_GITHUB_TOKEN)\n")
+		fmt.Fprintf(os.Stderr, "  GORT_GITHUB_MODELS_MODEL     GitHub Models model name (default openai/gpt-4.1)\n")
+	}
+	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("gort version %s\n", version)
+		return
+	}
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 	slog.Info("starting gort", "version", version)
@@ -136,14 +162,15 @@ func run() error {
 				// Update the GitOpsWatcher status so results are visible via kubectl/oc.
 				now := metav1.Now()
 				w.Status.LastReconcileTime = &now
-				if err != nil {
+				switch {
+				case err != nil:
 					slog.Error("reconcile", "watcher", w.Name, "err", err)
 					w.Status.LastResult = "error"
-				} else if pr != nil {
+				case pr != nil:
 					slog.Info("fix PR opened", "watcher", w.Name, "pr", pr.URL)
 					w.Status.LastResult = "fix_pr_opened"
 					w.Status.LastFixPRURL = pr.URL
-				} else {
+				default:
 					slog.Info("reconcile complete, no action needed", "watcher", w.Name)
 					w.Status.LastResult = "success"
 				}

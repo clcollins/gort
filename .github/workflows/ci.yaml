@@ -13,30 +13,53 @@ permissions:
 
 jobs:
   # ── Go checks ────────────────────────────────────────────────────────────────
-  go-checks:
-    name: Go checks
+  tidy-check:
+    name: Go Tidy Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
-
       - name: Verify go.mod is tidy
         run: make tidy-check
 
-      - name: gofmt
+  fmt:
+    name: Go Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Check formatting
         run: make fmt
 
-      - name: go vet
+  vet:
+    name: Go Vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Run go vet
         run: make vet
 
-      - name: go test with coverage
+  test:
+    name: Go Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Run tests with coverage
         run: make cover
-
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
@@ -44,8 +67,33 @@ jobs:
           files: coverage.out
           fail_ci_if_error: true
 
-      - name: golangci-lint
-        run: make lint
+  lint:
+    name: Go Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+
+  build:
+    name: Go Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build binary
+        run: make build
+      - name: Verify binary runs
+        run: ./bin/gort --help
 
   # ── Docs check ───────────────────────────────────────────────────────────────
   docs-check:
@@ -55,7 +103,6 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Check for plan document in docs/plans/
         run: make docs-check
 
@@ -65,9 +112,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Run markdownlint-cli2
         run: make markdown-lint
+
+  # ── YAML lint ─────────────────────────────────────────────────────────────────
+  yaml-lint:
+    name: YAML lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install yamllint
+        run: pip install yamllint
+      - name: Lint YAML files
+        run: make yaml-lint
 
   # ── Makefile lint ─────────────────────────────────────────────────────────────
   makefile-lint:
@@ -75,15 +132,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Go (for checkmake install)
-        uses: actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
-
       - name: Run checkmake
         run: make makefile-lint
+
+  # ── Prometheus rules ──────────────────────────────────────────────────────────
+  prometheus-rules:
+    name: Prometheus rule validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Prometheus alerting rules
+        run: make promrules-check
+
+  # ── Containerfile check ───────────────────────────────────────────────────────
+  containerfile-check:
+    name: Containerfile tag check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Containerfile base image tags
+        run: make containerfile-check
 
   # ── Container image build ─────────────────────────────────────────────────────
   image-build:
@@ -116,3 +188,6 @@ jobs:
           podman inspect ${{ env.IMAGE_NAME }}:ci --format '{{index .Config.Labels "is.collins.cluster.build.commit.id"}}' | grep -q "$(git rev-parse HEAD)"
           podman inspect ${{ env.IMAGE_NAME }}:ci --format '{{index .Config.Labels "io.k8s.display-name"}}' | grep -q "gort"
           echo "All OCI labels validated successfully."
+
+      - name: Validate image runs
+        run: podman run --rm ${{ env.IMAGE_NAME }}:ci

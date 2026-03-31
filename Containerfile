@@ -16,6 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux \
       -a \
       -o gort \
       ./cmd/gort
+RUN ./gort --help
 
 # Stage 2: runtime — UBI9 minimal (no shell, no package manager, smallest attack surface)
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
@@ -52,3 +53,4 @@ USER 65532:65532
 EXPOSE 8080 8081
 
 ENTRYPOINT ["/gort"]
+CMD ["--help"]
