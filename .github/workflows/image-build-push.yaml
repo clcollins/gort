@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: quay.io
-  IMAGE_NAME: chcollin/gort
+  IMAGE_NAME: clcollins/gort
   CONTAINER_FILE: Containerfile
 
 jobs:
