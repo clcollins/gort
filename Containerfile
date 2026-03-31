@@ -1,9 +1,7 @@
-# Stage 1: build
+# Stage 1: build — uses /opt/app-root/src (go-toolset default, owned by UID 1001)
 FROM registry.access.redhat.com/ubi9/go-toolset:latest AS builder
 
 ARG VERSION=dev
-
-WORKDIR /workspace
 
 # Cache dependencies before copying source.
 COPY go.mod go.sum ./
@@ -47,7 +45,7 @@ LABEL org.opencontainers.image.title="gort" \
 WORKDIR /
 
 # Copy only the compiled binary.
-COPY --from=builder /workspace/gort /gort
+COPY --from=builder /opt/app-root/src/gort /gort
 
 # Run as non-root (UID 65532 = "nonroot" convention).
 USER 65532:65532
