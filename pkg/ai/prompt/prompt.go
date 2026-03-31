@@ -101,6 +101,18 @@ func ParseAnalysisResponse(text string) *ai.AnalysisResult {
 		trimmed := strings.TrimSpace(line)
 
 		switch {
+		// File content accumulation must be checked before headers so that
+		// lines like "SUMMARY:" inside file content are preserved verbatim.
+		case inFile && inFilesSection && trimmed == "---":
+			result.Files = append(result.Files, ai.FileProposal{
+				Path:    currentPath,
+				Content: fileContent.String(),
+			})
+			inFile = false
+			currentPath = ""
+			expectingPath = true
+		case inFile:
+			fileContent.WriteString(line + "\n")
 		case strings.HasPrefix(trimmed, "SUMMARY:"):
 			result.Summary = strings.TrimSpace(strings.TrimPrefix(trimmed, "SUMMARY:"))
 		case strings.HasPrefix(trimmed, "FIX_PLAN:"):
@@ -111,25 +123,15 @@ func ParseAnalysisResponse(text string) *ai.AnalysisResult {
 			inFile = false
 			currentPath = ""
 			fileContent.Reset()
-		case inFilesSection && expectingPath && !inFile:
+		case inFilesSection && expectingPath:
 			if trimmed == "" || trimmed == "---" {
 				continue
 			}
 			currentPath = trimmed
 			expectingPath = false
-		case inFilesSection && trimmed == "---" && !inFile && currentPath != "":
+		case inFilesSection && trimmed == "---" && currentPath != "":
 			inFile = true
 			fileContent.Reset()
-		case inFilesSection && trimmed == "---" && inFile:
-			result.Files = append(result.Files, ai.FileProposal{
-				Path:    currentPath,
-				Content: fileContent.String(),
-			})
-			inFile = false
-			currentPath = ""
-			expectingPath = true
-		case inFile:
-			fileContent.WriteString(line + "\n")
 		}
 	}
 	if inFile && currentPath != "" {
@@ -155,6 +157,18 @@ func ParseIntentResponse(text string) *ai.IntentValidationResult {
 		trimmed := strings.TrimSpace(line)
 
 		switch {
+		// File content accumulation must be checked before headers so that
+		// lines like "INTENT_MET:" inside file content are preserved verbatim.
+		case inFile && inFilesSection && trimmed == "---":
+			result.Files = append(result.Files, ai.FileProposal{
+				Path:    currentPath,
+				Content: fileContent.String(),
+			})
+			inFile = false
+			currentPath = ""
+			expectingPath = true
+		case inFile:
+			fileContent.WriteString(line + "\n")
 		case strings.HasPrefix(trimmed, "INTENT_MET:"):
 			val := strings.TrimSpace(strings.TrimPrefix(trimmed, "INTENT_MET:"))
 			result.Met = strings.EqualFold(val, "true")
@@ -175,25 +189,15 @@ func ParseIntentResponse(text string) *ai.IntentValidationResult {
 			inFile = false
 			currentPath = ""
 			fileContent.Reset()
-		case inFilesSection && expectingPath && !inFile:
+		case inFilesSection && expectingPath:
 			if trimmed == "" || trimmed == "---" {
 				continue
 			}
 			currentPath = trimmed
 			expectingPath = false
-		case inFilesSection && trimmed == "---" && !inFile && currentPath != "":
+		case inFilesSection && trimmed == "---" && currentPath != "":
 			inFile = true
 			fileContent.Reset()
-		case inFilesSection && trimmed == "---" && inFile:
-			result.Files = append(result.Files, ai.FileProposal{
-				Path:    currentPath,
-				Content: fileContent.String(),
-			})
-			inFile = false
-			currentPath = ""
-			expectingPath = true
-		case inFile:
-			fileContent.WriteString(line + "\n")
 		}
 	}
 	if inFile && currentPath != "" {

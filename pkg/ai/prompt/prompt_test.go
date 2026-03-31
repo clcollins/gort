@@ -236,3 +236,53 @@ replicas: 3`
 		t.Errorf("Files[0].Path = %q", result.Files[0].Path)
 	}
 }
+
+func TestParseAnalysisResponse_HeaderLikeContentInFile(t *testing.T) {
+	text := `SUMMARY: config needs update
+FIX_PLAN: Replace the config
+FILES:
+config/app.yaml
+---
+SUMMARY: this is not a header
+FIX_PLAN: this is also not a header
+key: value
+---`
+
+	result := prompt.ParseAnalysisResponse(text)
+
+	if result.Summary != "config needs update" {
+		t.Errorf("Summary = %q, want %q", result.Summary, "config needs update")
+	}
+	if len(result.Files) != 1 {
+		t.Fatalf("len(Files) = %d, want 1", len(result.Files))
+	}
+	if !strings.Contains(result.Files[0].Content, "SUMMARY: this is not a header") {
+		t.Errorf("file content should contain header-like line, got %q", result.Files[0].Content)
+	}
+}
+
+func TestParseIntentResponse_HeaderLikeContentInFile(t *testing.T) {
+	text := `INTENT_MET: false
+ISSUES: drift detected
+FIX_PLAN: Update manifest
+FILES:
+deploy/manifest.yaml
+---
+INTENT_MET: this should be content
+ISSUES: also content
+FIX_PLAN: still content
+data: value
+---`
+
+	result := prompt.ParseIntentResponse(text)
+
+	if result.Met {
+		t.Error("expected Met=false")
+	}
+	if len(result.Files) != 1 {
+		t.Fatalf("len(Files) = %d, want 1", len(result.Files))
+	}
+	if !strings.Contains(result.Files[0].Content, "INTENT_MET: this should be content") {
+		t.Errorf("file content should contain header-like line, got %q", result.Files[0].Content)
+	}
+}
