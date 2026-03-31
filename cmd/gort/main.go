@@ -23,15 +23,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	gortv1alpha1 "github.com/clcollins/gort/api/v1alpha1"
-	"github.com/clcollins/gort/pkg/ai"
 	"github.com/clcollins/gort/internal/claudeai"
-	"github.com/clcollins/gort/internal/ghmodels"
 	"github.com/clcollins/gort/internal/flux"
+	"github.com/clcollins/gort/internal/ghmodels"
 	githubclient "github.com/clcollins/gort/internal/github"
 	internalk8s "github.com/clcollins/gort/internal/k8s"
 	_ "github.com/clcollins/gort/internal/metrics" // register metrics on init
 	"github.com/clcollins/gort/internal/reconciler"
 	"github.com/clcollins/gort/internal/webhook"
+	"github.com/clcollins/gort/pkg/ai"
 	"github.com/clcollins/gort/pkg/vcs"
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1"
 )
@@ -224,10 +224,10 @@ type appConfig struct {
 
 func loadConfig() appConfig {
 	cfg := appConfig{
-		listenAddr:   getEnv("GORT_LISTEN_ADDR", ":8080"),
-		metricsAddr:  getEnv("GORT_METRICS_ADDR", ":8081"),
-		aiProvider:   getEnv("GORT_AI_PROVIDER", "claude"),
-		claudeModel:  getEnv("GORT_CLAUDE_MODEL", "claude-sonnet-4-6"),
+		listenAddr:    getEnv("GORT_LISTEN_ADDR", ":8080"),
+		metricsAddr:   getEnv("GORT_METRICS_ADDR", ":8081"),
+		aiProvider:    getEnv("GORT_AI_PROVIDER", "claude"),
+		claudeModel:   getEnv("GORT_CLAUDE_MODEL", "claude-sonnet-4-6"),
 		ghModelsModel: getEnv("GORT_GITHUB_MODELS_MODEL", "openai/gpt-4.1"),
 	}
 	cfg.webhookSecret = mustEnv("GORT_WEBHOOK_SECRET")

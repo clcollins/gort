@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	defaultBaseURL    = "https://models.github.ai"
-	githubAPIVersion  = "2025-04-01"
-	maxTokens         = 4096
+	defaultBaseURL   = "https://models.github.ai"
+	githubAPIVersion = "2025-04-01"
+	maxTokens        = 4096
 )
 
 // Option configures the GitHub Models client.

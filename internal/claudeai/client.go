@@ -165,4 +165,3 @@ func (c *client) ValidateIntent(ctx context.Context, req ai.IntentValidationRequ
 
 	return prompt.ParseIntentResponse(text), nil
 }
-
