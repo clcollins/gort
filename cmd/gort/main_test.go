@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -44,7 +45,7 @@ func TestVersionFlag(t *testing.T) {
 func buildTestBinary(t *testing.T) string {
 	t.Helper()
 
-	binary := t.TempDir() + "/gort"
+	binary := filepath.Join(t.TempDir(), "gort")
 	cmd := exec.Command("go", "build", //nolint:gosec // binary is a t.TempDir() output path, not user input
 		"-ldflags=-X main.version=test-build",
 		"-o", binary,

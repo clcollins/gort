@@ -25,7 +25,11 @@ tar xzf "/tmp/${PROM_TGZ}" -C /tmp/ "${PROM_DIR}/promtool" --strip-components=1
 
 echo "=== Installing yq ==="
 YQ_VERSION="v4.44.1"
+YQ_SHA256="6dc2d0cd4e0caca5aeffd0d784a48263591080e4a0895abe69f3a76eb50d1ba3"
 curl -sL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" -o /tmp/yq
+
+echo "=== Verifying yq checksum ==="
+echo "${YQ_SHA256}  /tmp/yq" | sha256sum -c -
 chmod +x /tmp/yq
 
 echo "=== Extracting spec.groups from PrometheusRule ==="
