@@ -159,3 +159,80 @@ resources:
 		t.Fatalf("len(Files) = %d, want 1", len(result.Files))
 	}
 }
+
+func TestParseAnalysisResponse_NonYAMLExtension(t *testing.T) {
+	text := `SUMMARY: terraform config needs update
+FIX_PLAN: Update variables
+FILES:
+infra/main.tf
+---
+resource "aws_instance" "web" {}
+---`
+
+	result := prompt.ParseAnalysisResponse(text)
+
+	if len(result.Files) != 1 {
+		t.Fatalf("len(Files) = %d, want 1", len(result.Files))
+	}
+	if result.Files[0].Path != "infra/main.tf" {
+		t.Errorf("Files[0].Path = %q, want %q", result.Files[0].Path, "infra/main.tf")
+	}
+}
+
+func TestParseAnalysisResponse_MissingTrailingDelimiter(t *testing.T) {
+	text := `SUMMARY: missing config
+FIX_PLAN: Add config file
+FILES:
+config/settings.json
+---
+{"debug": true}`
+
+	result := prompt.ParseAnalysisResponse(text)
+
+	if len(result.Files) != 1 {
+		t.Fatalf("len(Files) = %d, want 1", len(result.Files))
+	}
+	if result.Files[0].Path != "config/settings.json" {
+		t.Errorf("Files[0].Path = %q", result.Files[0].Path)
+	}
+}
+
+func TestParseIntentResponse_NonYAMLExtension(t *testing.T) {
+	text := `INTENT_MET: false
+ISSUES: config mismatch
+FIX_PLAN: Update config
+FILES:
+app/config.toml
+---
+[server]
+port = 8080
+---`
+
+	result := prompt.ParseIntentResponse(text)
+
+	if len(result.Files) != 1 {
+		t.Fatalf("len(Files) = %d, want 1", len(result.Files))
+	}
+	if result.Files[0].Path != "app/config.toml" {
+		t.Errorf("Files[0].Path = %q", result.Files[0].Path)
+	}
+}
+
+func TestParseIntentResponse_MissingTrailingDelimiter(t *testing.T) {
+	text := `INTENT_MET: false
+ISSUES: wrong replicas
+FIX_PLAN: Fix deployment
+FILES:
+deploy/patch.yml
+---
+replicas: 3`
+
+	result := prompt.ParseIntentResponse(text)
+
+	if len(result.Files) != 1 {
+		t.Fatalf("len(Files) = %d, want 1", len(result.Files))
+	}
+	if result.Files[0].Path != "deploy/patch.yml" {
+		t.Errorf("Files[0].Path = %q", result.Files[0].Path)
+	}
+}

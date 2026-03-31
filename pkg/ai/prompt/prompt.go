@@ -91,34 +91,52 @@ func appendPlanDocs(b *strings.Builder, docs []ai.PlanDocument) {
 func ParseAnalysisResponse(text string) *ai.AnalysisResult {
 	result := &ai.AnalysisResult{}
 	lines := strings.Split(text, "\n")
+	var inFilesSection bool
 	var inFile bool
+	var expectingPath bool
 	var currentPath string
 	var fileContent strings.Builder
 
 	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
 		switch {
 		case strings.HasPrefix(line, "SUMMARY:"):
 			result.Summary = strings.TrimSpace(strings.TrimPrefix(line, "SUMMARY:"))
 		case strings.HasPrefix(line, "FIX_PLAN:"):
 			result.FixPlan = strings.TrimSpace(strings.TrimPrefix(line, "FIX_PLAN:"))
 		case strings.HasPrefix(line, "FILES:"):
-			// next lines are file path / content pairs
-		case !inFile && currentPath == "" &&
-			(strings.HasSuffix(strings.TrimSpace(line), ".yaml") || strings.HasSuffix(strings.TrimSpace(line), ".md")):
-			currentPath = strings.TrimSpace(line)
-		case line == "---" && currentPath != "" && !inFile:
+			inFilesSection = true
+			expectingPath = true
+			inFile = false
+			currentPath = ""
+			fileContent.Reset()
+		case inFilesSection && expectingPath && !inFile:
+			if trimmed == "" {
+				continue
+			}
+			currentPath = trimmed
+			expectingPath = false
+		case inFilesSection && trimmed == "---" && !inFile && currentPath != "":
 			inFile = true
 			fileContent.Reset()
-		case line == "---" && inFile:
+		case inFilesSection && trimmed == "---" && inFile:
 			result.Files = append(result.Files, ai.FileProposal{
 				Path:    currentPath,
 				Content: fileContent.String(),
 			})
 			inFile = false
 			currentPath = ""
+			expectingPath = true
 		case inFile:
 			fileContent.WriteString(line + "\n")
 		}
+	}
+	if inFile && currentPath != "" {
+		result.Files = append(result.Files, ai.FileProposal{
+			Path:    currentPath,
+			Content: fileContent.String(),
+		})
 	}
 	return result
 }
@@ -127,11 +145,15 @@ func ParseAnalysisResponse(text string) *ai.AnalysisResult {
 func ParseIntentResponse(text string) *ai.IntentValidationResult {
 	result := &ai.IntentValidationResult{}
 	lines := strings.Split(text, "\n")
+	var inFilesSection bool
 	var inFile bool
+	var expectingPath bool
 	var currentPath string
 	var fileContent strings.Builder
 
 	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
 		switch {
 		case strings.HasPrefix(line, "INTENT_MET:"):
 			val := strings.TrimSpace(strings.TrimPrefix(line, "INTENT_MET:"))
@@ -140,29 +162,45 @@ func ParseIntentResponse(text string) *ai.IntentValidationResult {
 			issues := strings.TrimSpace(strings.TrimPrefix(line, "ISSUES:"))
 			if issues != "" && !strings.EqualFold(issues, "none") {
 				for _, issue := range strings.Split(issues, ",") {
-					if trimmed := strings.TrimSpace(issue); trimmed != "" {
-						result.Issues = append(result.Issues, trimmed)
+					if t := strings.TrimSpace(issue); t != "" {
+						result.Issues = append(result.Issues, t)
 					}
 				}
 			}
 		case strings.HasPrefix(line, "FIX_PLAN:"):
 			result.FixPlan = strings.TrimSpace(strings.TrimPrefix(line, "FIX_PLAN:"))
-		case !inFile && currentPath == "" &&
-			(strings.HasSuffix(strings.TrimSpace(line), ".yaml") || strings.HasSuffix(strings.TrimSpace(line), ".md")):
-			currentPath = strings.TrimSpace(line)
-		case line == "---" && currentPath != "" && !inFile:
+		case strings.HasPrefix(trimmed, "FILES:"):
+			inFilesSection = true
+			expectingPath = true
+			inFile = false
+			currentPath = ""
+			fileContent.Reset()
+		case inFilesSection && expectingPath && !inFile:
+			if trimmed == "" {
+				continue
+			}
+			currentPath = trimmed
+			expectingPath = false
+		case inFilesSection && trimmed == "---" && !inFile && currentPath != "":
 			inFile = true
 			fileContent.Reset()
-		case line == "---" && inFile:
+		case inFilesSection && trimmed == "---" && inFile:
 			result.Files = append(result.Files, ai.FileProposal{
 				Path:    currentPath,
 				Content: fileContent.String(),
 			})
 			inFile = false
 			currentPath = ""
+			expectingPath = true
 		case inFile:
 			fileContent.WriteString(line + "\n")
 		}
+	}
+	if inFile && currentPath != "" {
+		result.Files = append(result.Files, ai.FileProposal{
+			Path:    currentPath,
+			Content: fileContent.String(),
+		})
 	}
 	return result
 }
