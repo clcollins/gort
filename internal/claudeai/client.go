@@ -104,7 +104,7 @@ func (c *client) callMessages(ctx context.Context, prompt string) (string, error
 	if err != nil {
 		return "", fmt.Errorf("claudeai: http: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	respBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
