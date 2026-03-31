@@ -39,7 +39,7 @@ while IFS= read -r line; do
   # Check for missing registry prefix
   has_registry=0
   for registry in "${KNOWN_REGISTRIES[@]}"; do
-    if echo "${image}" | grep -q "^${registry}/"; then
+    if [[ "${image}" == "${registry}/"* ]]; then
       has_registry=1
       break
     fi
