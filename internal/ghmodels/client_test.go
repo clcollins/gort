@@ -48,6 +48,25 @@ func newTestServer(t *testing.T, response map[string]any) *httptest.Server {
 		if r.URL.Path != "/inference/chat/completions" {
 			t.Errorf("expected path /inference/chat/completions, got %q", r.URL.Path)
 		}
+		// Verify HTTP method.
+		if r.Method != http.MethodPost {
+			t.Errorf("expected method POST, got %q", r.Method)
+		}
+		// Verify request body contains expected JSON structure.
+		var payload map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode request body as JSON: %v", err)
+		}
+		if model, ok := payload["model"].(string); !ok || model == "" {
+			t.Errorf("expected non-empty 'model' field, got %v", payload["model"])
+		}
+		messages, ok := payload["messages"].([]any)
+		if !ok || len(messages) == 0 {
+			t.Errorf("expected non-empty 'messages' array, got %v", payload["messages"])
+		}
+		if _, ok := payload["max_tokens"]; !ok {
+			t.Error("expected 'max_tokens' field in request body")
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(response); err != nil {
