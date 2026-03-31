@@ -25,11 +25,13 @@ import (
 	gortv1alpha1 "github.com/clcollins/gort/api/v1alpha1"
 	"github.com/clcollins/gort/internal/claudeai"
 	"github.com/clcollins/gort/internal/flux"
+	"github.com/clcollins/gort/internal/ghmodels"
 	githubclient "github.com/clcollins/gort/internal/github"
 	internalk8s "github.com/clcollins/gort/internal/k8s"
 	_ "github.com/clcollins/gort/internal/metrics" // register metrics on init
 	"github.com/clcollins/gort/internal/reconciler"
 	"github.com/clcollins/gort/internal/webhook"
+	"github.com/clcollins/gort/pkg/ai"
 	"github.com/clcollins/gort/pkg/vcs"
 	kustomizev1 "github.com/fluxcd/kustomize-controller/api/v1"
 )
@@ -86,8 +88,14 @@ func run() error {
 	gc := gogithub.NewClient(tc)
 	vcsClient := githubclient.NewClient(gc, cfg.webhookSecret)
 
-	// Build AI (Claude) client.
-	aiClient := claudeai.NewClient(cfg.claudeAPIKey, cfg.claudeModel)
+	// Build AI client based on configured provider.
+	var aiClient ai.Client
+	switch cfg.aiProvider {
+	case "claude":
+		aiClient = claudeai.NewClient(cfg.claudeAPIKey, cfg.claudeModel)
+	case "github-models":
+		aiClient = ghmodels.NewClient(cfg.ghModelsToken, cfg.ghModelsModel)
+	}
 
 	// Build reconciler.
 	rec := reconciler.New(gitopsClient, vcsClient, aiClient)
@@ -207,19 +215,33 @@ type appConfig struct {
 	metricsAddr   string
 	webhookSecret string
 	githubToken   string
+	aiProvider    string
 	claudeAPIKey  string
 	claudeModel   string
+	ghModelsToken string
+	ghModelsModel string
 }
 
 func loadConfig() appConfig {
 	cfg := appConfig{
-		listenAddr:  getEnv("GORT_LISTEN_ADDR", ":8080"),
-		metricsAddr: getEnv("GORT_METRICS_ADDR", ":8081"),
-		claudeModel: getEnv("GORT_CLAUDE_MODEL", "claude-sonnet-4-6"),
+		listenAddr:    getEnv("GORT_LISTEN_ADDR", ":8080"),
+		metricsAddr:   getEnv("GORT_METRICS_ADDR", ":8081"),
+		aiProvider:    getEnv("GORT_AI_PROVIDER", "claude"),
+		claudeModel:   getEnv("GORT_CLAUDE_MODEL", "claude-sonnet-4-6"),
+		ghModelsModel: getEnv("GORT_GITHUB_MODELS_MODEL", "openai/gpt-4.1"),
 	}
 	cfg.webhookSecret = mustEnv("GORT_WEBHOOK_SECRET")
 	cfg.githubToken = mustEnv("GORT_GITHUB_TOKEN")
-	cfg.claudeAPIKey = mustEnv("GORT_CLAUDE_API_KEY")
+
+	switch cfg.aiProvider {
+	case "claude":
+		cfg.claudeAPIKey = mustEnv("GORT_CLAUDE_API_KEY")
+	case "github-models":
+		cfg.ghModelsToken = getEnv("GORT_GITHUB_MODELS_TOKEN", cfg.githubToken)
+	default:
+		slog.Error("unsupported AI provider", "provider", cfg.aiProvider)
+		os.Exit(1)
+	}
 	return cfg
 }
 
