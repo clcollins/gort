@@ -1,6 +1,8 @@
 # Stage 1: build
 FROM registry.access.redhat.com/ubi9/go-toolset:latest AS builder
 
+ARG VERSION=dev
+
 WORKDIR /workspace
 
 # Cache dependencies before copying source.
@@ -12,10 +14,11 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux \
     go build \
       -buildvcs=false \
-      -ldflags="-s -w" \
+      -ldflags="-s -w -X main.version=${VERSION}" \
       -a \
       -o gort \
       ./cmd/gort
+RUN ./gort --help
 
 # Stage 2: runtime — UBI9 minimal (no shell, no package manager, smallest attack surface)
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
