@@ -48,7 +48,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Flags:\n")
 		flag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\nRequired environment variables:\n")
-		fmt.Fprintf(os.Stderr, "  GORT_WEBHOOK_SECRET    GitHub webhook secret\n")
+		fmt.Fprintf(os.Stderr, "  GORT_GITHUB_WEBHOOK_SECRET  GitHub webhook secret (GORT_WEBHOOK_SECRET also accepted, deprecated)\n")
 		fmt.Fprintf(os.Stderr, "  GORT_GITHUB_TOKEN      GitHub personal access token\n")
 		fmt.Fprintf(os.Stderr, "  GORT_CLAUDE_API_KEY    Claude API key (when AI provider is claude)\n")
 		fmt.Fprintf(os.Stderr, "\nOptional environment variables:\n")
@@ -112,7 +112,7 @@ func run() error {
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: cfg.githubToken})
 	tc := oauth2.NewClient(context.Background(), ts)
 	gc := gogithub.NewClient(tc)
-	vcsClient := githubclient.NewClient(gc, cfg.webhookSecret)
+	vcsClient := githubclient.NewClient(gc, cfg.githubWebhookSecret)
 
 	// Build AI client based on configured provider.
 	var aiClient ai.Client
@@ -183,7 +183,7 @@ func run() error {
 
 	// webhookMux handles inbound GitHub webhook traffic only.
 	webhookMux := http.NewServeMux()
-	webhookMux.Handle("/webhook", webhook.NewHandler(cfg.webhookSecret, dispatch, ctx))
+	webhookMux.Handle("/webhook", webhook.NewHandler(cfg.githubWebhookSecret, dispatch, ctx))
 
 	// metricsMux exposes Prometheus metrics and Kubernetes health probes on a
 	// dedicated port so that scrape traffic is independent of webhook ingress.
@@ -238,15 +238,15 @@ func run() error {
 }
 
 type appConfig struct {
-	listenAddr    string
-	metricsAddr   string
-	webhookSecret string
-	githubToken   string
-	aiProvider    string
-	claudeAPIKey  string
-	claudeModel   string
-	ghModelsToken string
-	ghModelsModel string
+	listenAddr          string
+	metricsAddr         string
+	githubWebhookSecret string
+	githubToken         string
+	aiProvider          string
+	claudeAPIKey        string
+	claudeModel         string
+	ghModelsToken       string
+	ghModelsModel       string
 }
 
 func loadConfig() appConfig {
@@ -257,7 +257,7 @@ func loadConfig() appConfig {
 		claudeModel:   getEnv("GORT_CLAUDE_MODEL", "claude-sonnet-4-6"),
 		ghModelsModel: getEnv("GORT_GITHUB_MODELS_MODEL", "openai/gpt-4.1"),
 	}
-	cfg.webhookSecret = mustEnv("GORT_WEBHOOK_SECRET")
+	cfg.githubWebhookSecret = envWithDeprecatedFallback("GORT_GITHUB_WEBHOOK_SECRET", "GORT_WEBHOOK_SECRET")
 	cfg.githubToken = mustEnv("GORT_GITHUB_TOKEN")
 
 	switch cfg.aiProvider {
@@ -286,4 +286,20 @@ func mustEnv(key string) string {
 		os.Exit(1)
 	}
 	return v
+}
+
+// envWithDeprecatedFallback reads newKey first; if empty, falls back to oldKey
+// with a deprecation warning. Exits if neither is set.
+func envWithDeprecatedFallback(newKey, oldKey string) string {
+	if v := os.Getenv(newKey); v != "" {
+		return v
+	}
+	if v := os.Getenv(oldKey); v != "" {
+		slog.Warn("deprecated environment variable, use new name instead",
+			"old", oldKey, "new", newKey)
+		return v
+	}
+	slog.Error("required environment variable not set", "key", newKey)
+	os.Exit(1)
+	return "" // unreachable
 }
