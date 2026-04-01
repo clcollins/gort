@@ -13,14 +13,12 @@ linters:
     - gocritic
     - misspell
     - gosec
-
-linters-settings:
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - style
-      - performance
-
-issues:
-  exclude-dirs:
-    - api/v1alpha1
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+      disabled-checks:
+        - commentedOutCode
+  exclusions:
+    paths:
+      - api/v1alpha1
