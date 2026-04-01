@@ -129,7 +129,7 @@ make generate
 
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
-| `GORT_WEBHOOK_SECRET` | yes | — | GitHub webhook HMAC secret |
+| `GORT_GITHUB_WEBHOOK_SECRET` | yes | — | GitHub webhook HMAC secret (`GORT_WEBHOOK_SECRET` also accepted, deprecated) |
 | `GORT_GITHUB_TOKEN` | yes | — | GitHub personal access token (repo + PR scope) |
 | `GORT_CLAUDE_API_KEY` | yes | — | Anthropic Claude API key |
 | `GORT_CLAUDE_MODEL` | no | `claude-sonnet-4-6` | Claude model to use |

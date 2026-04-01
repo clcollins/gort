@@ -17,7 +17,7 @@ func TestHelpFlag(t *testing.T) {
 		t.Fatalf("--help exited with error: %v\noutput: %s", err, out)
 	}
 
-	for _, want := range []string{"GORT", "GitOps Reconciliation Tool", "GORT_WEBHOOK_SECRET", "GORT_GITHUB_TOKEN"} {
+	for _, want := range []string{"GORT", "GitOps Reconciliation Tool", "GORT_GITHUB_WEBHOOK_SECRET", "GORT_GITHUB_TOKEN"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("--help output missing %q", want)
 		}
