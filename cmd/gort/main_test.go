@@ -63,11 +63,86 @@ func buildTestBinary(t *testing.T) string {
 	return binary
 }
 
+// TestEnvWithDeprecatedFallback_NewKey verifies that the new env var name is used
+// when set, without any deprecation warning.
+func TestEnvWithDeprecatedFallback_NewKey(t *testing.T) {
+	binary := buildTestBinary(t)
+
+	out, _ := runBinaryWithEnv(t, binary, "", map[string]string{
+		"GORT_GITHUB_WEBHOOK_SECRET": "new-secret",
+		"GORT_GITHUB_TOKEN":          "fake-token",
+		"GORT_CLAUDE_API_KEY":        "fake-key",
+	})
+
+	if strings.Contains(out, "deprecated") {
+		t.Error("should not log deprecation warning when new key is set")
+	}
+	// Should get past loadConfig (fail later on kubeconfig, not on missing env var).
+	if strings.Contains(out, "required environment variable not set") {
+		t.Error("should not report missing env var when new key is set")
+	}
+}
+
+// TestEnvWithDeprecatedFallback_OldKey verifies that the old env var name works
+// as a fallback and emits a deprecation warning.
+func TestEnvWithDeprecatedFallback_OldKey(t *testing.T) {
+	binary := buildTestBinary(t)
+
+	out, _ := runBinaryWithEnv(t, binary, "", map[string]string{
+		"GORT_WEBHOOK_SECRET": "old-secret",
+		"GORT_GITHUB_TOKEN":   "fake-token",
+		"GORT_CLAUDE_API_KEY": "fake-key",
+	})
+
+	if !strings.Contains(out, "deprecated") {
+		t.Error("should log deprecation warning when only old key is set")
+	}
+	if strings.Contains(out, "required environment variable not set") {
+		t.Error("should not report missing env var when old key is set")
+	}
+}
+
+// TestEnvWithDeprecatedFallback_NeitherKey verifies that the binary exits with
+// an error when neither the new nor old env var is set.
+func TestEnvWithDeprecatedFallback_NeitherKey(t *testing.T) {
+	binary := buildTestBinary(t)
+
+	out, err := runBinaryWithEnv(t, binary, "", map[string]string{
+		"GORT_GITHUB_TOKEN":   "fake-token",
+		"GORT_CLAUDE_API_KEY": "fake-key",
+	})
+
+	if err == nil {
+		t.Fatal("expected non-zero exit when neither key is set")
+	}
+	if !strings.Contains(out, "GORT_GITHUB_WEBHOOK_SECRET") {
+		t.Errorf("error should reference GORT_GITHUB_WEBHOOK_SECRET, got: %s", out)
+	}
+}
+
 // runBinary executes the test binary with the given argument and returns the output.
 func runBinary(t *testing.T, binary, arg string) (string, error) {
 	t.Helper()
 
 	cmd := exec.Command(binary, arg) //nolint:gosec // binary is built by buildTestBinary from our own source
+	out, err := cmd.CombinedOutput()
+	return string(out), err
+}
+
+// runBinaryWithEnv executes the test binary with a given argument and custom environment.
+func runBinaryWithEnv(t *testing.T, binary, arg string, env map[string]string) (string, error) {
+	t.Helper()
+
+	var args []string
+	if arg != "" {
+		args = append(args, arg)
+	}
+	cmd := exec.Command(binary, args...) //nolint:gosec // binary is built by buildTestBinary from our own source
+	// Start with a clean environment to avoid inheriting any GORT_ vars.
+	cmd.Env = []string{}
+	for k, v := range env {
+		cmd.Env = append(cmd.Env, k+"="+v)
+	}
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }

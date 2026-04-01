@@ -17,8 +17,18 @@ linters:
     gocritic:
       enabled-tags:
         - diagnostic
+        - style
+        - performance
       disabled-checks:
+        # TODO: fix these and re-enable
+        - builtinShadow
         - commentedOutCode
+        - httpNoBody
+        - hugeParam
+        - importShadow
+        - nestingReduce
+        - rangeValCopy
+        - unnamedResult
   exclusions:
     paths:
       - api/v1alpha1
