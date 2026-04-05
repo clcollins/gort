@@ -6,8 +6,8 @@
 [![codecov](https://codecov.io/gh/clcollins/gort/branch/main/graph/badge.svg)](https://codecov.io/gh/clcollins/gort)
 
 GORT closes the feedback loop after a merge to `main`. It watches for GitHub push events,
-polls Flux until reconciliation completes, and if anything goes wrong it uses the Claude
-API to analyze the failure and automatically opens a fix PR.
+polls Flux until reconciliation completes, and if anything goes wrong it uses a configurable
+AI provider to analyze the failure and automatically opens a fix PR.
 
 ## Problem
 
