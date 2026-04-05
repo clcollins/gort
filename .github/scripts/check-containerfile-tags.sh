@@ -4,7 +4,7 @@
 set -euo pipefail
 
 CONTAINERFILE="${1:-Containerfile}"
-ENFORCE="${ENFORCE:-0}"
+ENFORCE="${ENFORCE:-1}"
 
 if [ ! -f "${CONTAINERFILE}" ]; then
   echo "No Containerfile found at ${CONTAINERFILE} — skipping."
@@ -22,6 +22,7 @@ KNOWN_REGISTRIES=(
   "lscr.io"
   "registry.access.redhat.com"
   "registry.redhat.io"
+  "registry.fedoraproject.org"
 )
 
 WARNINGS=0

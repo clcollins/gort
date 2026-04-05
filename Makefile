@@ -110,12 +110,19 @@ image-push: ## Push the container image using $(CONTAINER_SUBSYS)
 
 # ── Local CI ───────────────────────────────────────────────────────────────────
 
-.PHONY: ci-all
-ci-all: tidy-check fmt vet cover lint build docs-check markdown-lint yaml-lint makefile-lint promrules-check containerfile-check image-build ## Run all CI checks locally (mirrors .github/workflows/ci.yaml)
+CI_CONTAINER_FILE ?= test/Containerfile.ci
+CI_IMAGE          ?= gort-ci:local
 
-.PHONY: ci-container
-ci-container: ## Run all CI checks inside ubuntu:latest (mirrors GitHub Actions ubuntu-latest environment)
-	$(CONTAINER_SUBSYS) run --rm -v "$(CURDIR):/workspace:z" -v /var/run/docker.sock:/var/run/docker.sock -w /workspace -e CONTAINER_SUBSYS=docker ubuntu:latest bash hack/ci-container.sh
+.PHONY: ci-build
+ci-build: ## Build the CI container image
+	$(CONTAINER_SUBSYS) build -f $(CI_CONTAINER_FILE) -t $(CI_IMAGE) test/
+
+.PHONY: ci-all
+ci-all: ci-build ## Build CI container and run ci-checks inside it (local entry point)
+	$(CONTAINER_SUBSYS) run --rm --userns=keep-id -v $$(pwd):/src:Z -w /src $(CI_IMAGE) make ci-checks
+
+.PHONY: ci-checks
+ci-checks: tidy-check fmt vet cover lint build docs-check markdown-lint yaml-lint makefile-lint promrules-check containerfile-check ## Run all checks serially (intended to run inside the CI container)
 
 # ── Dependencies / Tools ───────────────────────────────────────────────────────
 

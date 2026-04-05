@@ -1,0 +1,13 @@
+.git
+.github
+docs/
+hack/
+test/
+*.md
+.golangci.yml
+.yamllint.yaml
+.markdownlint.yaml
+.containerignore
+CLAUDE.md
+CONVENTIONS.md
+LICENSE
