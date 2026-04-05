@@ -27,10 +27,10 @@ import (
 	"github.com/clcollins/gort/internal/claudeai"
 	"github.com/clcollins/gort/internal/flux"
 	"github.com/clcollins/gort/internal/ghmodels"
-	"github.com/clcollins/gort/internal/ollama"
 	githubclient "github.com/clcollins/gort/internal/github"
 	internalk8s "github.com/clcollins/gort/internal/k8s"
 	_ "github.com/clcollins/gort/internal/metrics" // register metrics on init
+	"github.com/clcollins/gort/internal/ollama"
 	"github.com/clcollins/gort/internal/reconciler"
 	"github.com/clcollins/gort/internal/webhook"
 	"github.com/clcollins/gort/pkg/ai"
