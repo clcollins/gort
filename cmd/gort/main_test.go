@@ -120,6 +120,26 @@ func TestEnvWithDeprecatedFallback_NeitherKey(t *testing.T) {
 	}
 }
 
+// TestOllamaProvider verifies that GORT_AI_PROVIDER=ollama is accepted
+// and does not require any AI API key.
+func TestOllamaProvider(t *testing.T) {
+	binary := buildTestBinary(t)
+
+	out, _ := runBinaryWithEnv(t, binary, "", map[string]string{
+		"GORT_GITHUB_WEBHOOK_SECRET": "test-secret",
+		"GORT_GITHUB_TOKEN":          "fake-token",
+		"GORT_AI_PROVIDER":           "ollama",
+	})
+
+	// Should get past loadConfig (fail later on kubeconfig, not on missing env var).
+	if strings.Contains(out, "required environment variable not set") {
+		t.Error("ollama provider should not require any additional env vars")
+	}
+	if strings.Contains(out, "unsupported AI provider") {
+		t.Error("ollama should be a supported AI provider")
+	}
+}
+
 // runBinary executes the test binary with the given argument and returns the output.
 func runBinary(t *testing.T, binary, arg string) (string, error) {
 	t.Helper()
