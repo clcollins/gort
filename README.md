@@ -28,11 +28,11 @@ GORT webhook handler (HMAC-validated)
 Flux status polling (in-cluster, read-only K8s API)
        │  Kustomizations, HelmReleases, pods, logs, events
        ▼
-       ├── Flux FAILURE ──► Claude API: analyze failure + plan docs
+       ├── Flux FAILURE ──► AI provider: analyze failure + plan docs
        │                               └──► GitHub API: open fix PR
        │
        └── Flux SUCCESS ──► Collect runtime state (pods, deployments, events)
-                            └──► Claude API: validate intent vs plan docs
+                            └──► AI provider: validate intent vs plan docs
                                  ├── Intent MET: done
                                  └── Intent NOT MET ──► GitHub API: open fix PR
 ```
