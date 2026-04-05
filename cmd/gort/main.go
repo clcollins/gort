@@ -27,6 +27,7 @@ import (
 	"github.com/clcollins/gort/internal/claudeai"
 	"github.com/clcollins/gort/internal/flux"
 	"github.com/clcollins/gort/internal/ghmodels"
+	"github.com/clcollins/gort/internal/ollama"
 	githubclient "github.com/clcollins/gort/internal/github"
 	internalk8s "github.com/clcollins/gort/internal/k8s"
 	_ "github.com/clcollins/gort/internal/metrics" // register metrics on init
@@ -54,10 +55,12 @@ func main() {
 		fmt.Fprintf(os.Stderr, "\nOptional environment variables:\n")
 		fmt.Fprintf(os.Stderr, "  GORT_LISTEN_ADDR             Webhook listen address (default :8080)\n")
 		fmt.Fprintf(os.Stderr, "  GORT_METRICS_ADDR            Metrics listen address (default :8081)\n")
-		fmt.Fprintf(os.Stderr, "  GORT_AI_PROVIDER             AI provider: claude or github-models (default claude)\n")
+		fmt.Fprintf(os.Stderr, "  GORT_AI_PROVIDER             AI provider: claude, github-models, or ollama (default claude)\n")
 		fmt.Fprintf(os.Stderr, "  GORT_CLAUDE_MODEL            Claude model name (default claude-sonnet-4-6)\n")
 		fmt.Fprintf(os.Stderr, "  GORT_GITHUB_MODELS_TOKEN     GitHub Models API token (defaults to GORT_GITHUB_TOKEN)\n")
 		fmt.Fprintf(os.Stderr, "  GORT_GITHUB_MODELS_MODEL     GitHub Models model name (default openai/gpt-4.1)\n")
+		fmt.Fprintf(os.Stderr, "  GORT_OLLAMA_URL              Ollama server URL (default http://localhost:11434)\n")
+		fmt.Fprintf(os.Stderr, "  GORT_OLLAMA_MODEL            Ollama model name (default llama3)\n")
 	}
 	flag.Parse()
 
@@ -121,6 +124,8 @@ func run() error {
 		aiClient = claudeai.NewClient(cfg.claudeAPIKey, cfg.claudeModel)
 	case "github-models":
 		aiClient = ghmodels.NewClient(cfg.ghModelsToken, cfg.ghModelsModel)
+	case "ollama":
+		aiClient = ollama.NewClient(cfg.ollamaModel, ollama.WithBaseURL(cfg.ollamaURL))
 	}
 
 	// Build reconciler.
@@ -247,6 +252,8 @@ type appConfig struct {
 	claudeModel         string
 	ghModelsToken       string
 	ghModelsModel       string
+	ollamaURL           string
+	ollamaModel         string
 }
 
 func loadConfig() appConfig {
@@ -256,6 +263,8 @@ func loadConfig() appConfig {
 		aiProvider:    getEnv("GORT_AI_PROVIDER", "claude"),
 		claudeModel:   getEnv("GORT_CLAUDE_MODEL", "claude-sonnet-4-6"),
 		ghModelsModel: getEnv("GORT_GITHUB_MODELS_MODEL", "openai/gpt-4.1"),
+		ollamaURL:     getEnv("GORT_OLLAMA_URL", "http://localhost:11434"),
+		ollamaModel:   getEnv("GORT_OLLAMA_MODEL", "llama3"),
 	}
 	cfg.githubWebhookSecret = envWithDeprecatedFallback("GORT_GITHUB_WEBHOOK_SECRET", "GORT_WEBHOOK_SECRET")
 	cfg.githubToken = mustEnv("GORT_GITHUB_TOKEN")
@@ -265,6 +274,8 @@ func loadConfig() appConfig {
 		cfg.claudeAPIKey = mustEnv("GORT_CLAUDE_API_KEY")
 	case "github-models":
 		cfg.ghModelsToken = getEnv("GORT_GITHUB_MODELS_TOKEN", cfg.githubToken)
+	case "ollama":
+		// No additional secrets required — Ollama runs without authentication.
 	default:
 		slog.Error("unsupported AI provider", "provider", cfg.aiProvider)
 		os.Exit(1)
