@@ -131,13 +131,13 @@ make generate
 | --- | --- | --- | --- |
 | `GORT_GITHUB_WEBHOOK_SECRET` | yes | — | GitHub webhook HMAC secret (`GORT_WEBHOOK_SECRET` also accepted, deprecated) |
 | `GORT_GITHUB_TOKEN` | yes | — | GitHub personal access token (repo + PR scope) |
-| `GORT_CLAUDE_API_KEY` | yes | — | Anthropic Claude API key |
-| `GORT_CLAUDE_MODEL` | no | `claude-sonnet-4-6` | Claude model to use |
+| `GORT_CLAUDE_API_KEY` | if `GORT_AI_PROVIDER=claude` | — | Anthropic Claude API key |
+| `GORT_CLAUDE_MODEL` | no | `claude-sonnet-4-6` | Claude model to use when `GORT_AI_PROVIDER=claude` |
 | `GORT_AI_PROVIDER` | no | `claude` | AI provider (`claude`, `github-models`, or `ollama`) |
-| `GORT_GITHUB_MODELS_TOKEN` | no | `GORT_GITHUB_TOKEN` | GitHub Models API token (needs `models:read` scope) |
-| `GORT_GITHUB_MODELS_MODEL` | no | `openai/gpt-4.1` | Model to use with GitHub Models |
-| `GORT_OLLAMA_URL` | no | `http://localhost:11434` | Ollama server URL |
-| `GORT_OLLAMA_MODEL` | no | `llama3` | Model to use with Ollama |
+| `GORT_GITHUB_MODELS_TOKEN` | if `GORT_AI_PROVIDER=github-models` | `GORT_GITHUB_TOKEN` | GitHub Models API token when using `github-models` (needs `models:read` scope) |
+| `GORT_GITHUB_MODELS_MODEL` | no | `openai/gpt-4.1` | Model to use when `GORT_AI_PROVIDER=github-models` |
+| `GORT_OLLAMA_URL` | no | `http://localhost:11434` | Ollama server URL when `GORT_AI_PROVIDER=ollama` |
+| `GORT_OLLAMA_MODEL` | no | `llama3` | Model to use when `GORT_AI_PROVIDER=ollama` |
 | `GORT_LISTEN_ADDR` | no | `:8080` | Webhook server listen address |
 | `GORT_METRICS_ADDR` | no | `:8081` | Metrics + health probe server listen address |
 
@@ -147,6 +147,7 @@ make generate
 cmd/gort/             — main entrypoint
 internal/
   claudeai/           — Claude AI client (implements pkg/ai.Client)
+  ghmodels/           — GitHub Models AI client (implements pkg/ai.Client)
   ollama/             — Ollama AI client (implements pkg/ai.Client)
   flux/               — Flux GitOps client (implements pkg/gitops.Client)
   github/             — GitHub VCS client (implements pkg/vcs.Client)
