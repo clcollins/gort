@@ -92,6 +92,65 @@ CI enforces this. File naming: `NNNN-short-description.md`.
 
 GORT follows the same convention when opening fix PRs on target repos.
 
+## Setup
+
+### 1. GitHub Personal Access Token
+
+GORT needs a GitHub token to read repositories and create fix PRs.
+
+1. Go to **GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens**
+2. Click **Generate new token**
+3. Set the **Repository access** to the repos GORT will manage
+4. Grant the permissions listed below
+5. Copy the token and set it as `GORT_GITHUB_TOKEN`
+
+#### Required Fine-Grained PAT Permissions
+
+| Permission | Access | Why |
+| --- | --- | --- |
+| **Contents** | Read and write | Read repo files and plan docs; create fix branches and commits |
+| **Pull requests** | Read and write | Open fix PRs |
+
+### 2. GitHub Webhook
+
+GORT receives push events via a GitHub webhook with HMAC signature validation.
+
+1. Generate a webhook secret:
+
+   ```sh
+   openssl rand -hex 32
+   ```
+
+2. In your target repository, go to **Settings → Webhooks → Add webhook**
+3. Configure the webhook:
+
+   | Field | Value |
+   | --- | --- |
+   | **Payload URL** | `https://<your-gort-host>:8080/webhook` |
+   | **Content type** | `application/json` |
+   | **Secret** | The value generated in step 1 |
+
+4. Under **Which events would you like to trigger this webhook?**, select **Just the push event**
+5. Click **Add webhook**
+6. Set the same secret value as `GORT_GITHUB_WEBHOOK_SECRET`
+
+### 3. AI Provider
+
+GORT uses an AI provider to analyze failures and validate intent. Choose one:
+
+#### Claude (default)
+
+1. Create an API key at [console.anthropic.com](https://console.anthropic.com/)
+2. Set `GORT_CLAUDE_API_KEY` to the key value
+3. Optionally set `GORT_CLAUDE_MODEL` (default: `claude-sonnet-4-6`)
+
+#### GitHub Models (alternative)
+
+1. Set `GORT_AI_PROVIDER=github-models`
+2. Optionally set `GORT_GITHUB_MODELS_TOKEN` (defaults to `GORT_GITHUB_TOKEN`)
+   — the token needs `models:read` scope
+3. Optionally set `GORT_GITHUB_MODELS_MODEL` (default: `openai/gpt-4.1`)
+
 ## Development
 
 ### Prerequisites
@@ -133,8 +192,11 @@ make generate
 | `GORT_GITHUB_TOKEN` | yes | — | GitHub personal access token (repo + PR scope) |
 | `GORT_CLAUDE_API_KEY` | yes | — | Anthropic Claude API key |
 | `GORT_CLAUDE_MODEL` | no | `claude-sonnet-4-6` | Claude model to use |
-| `GORT_LISTEN_ADDR` | no | `:8080` | Webhook server listen address |
-| `GORT_METRICS_ADDR` | no | `:8081` | Metrics + health probe server listen address |
+| `GORT_AI_PROVIDER` | no | `claude` | AI provider (`claude` or `github-models`) |
+| `GORT_GITHUB_MODELS_TOKEN` | no | `GORT_GITHUB_TOKEN` | GitHub Models API token (needs `models:read` scope) |
+| `GORT_GITHUB_MODELS_MODEL` | no | `openai/gpt-4.1` | Model to use with GitHub Models |
+| `GORT_LISTEN_ADDR` | no | `:8080` | Webhook server listen address (`host:port`, e.g. `:8080` for all interfaces or `127.0.0.1:8080` for localhost only) |
+| `GORT_METRICS_ADDR` | no | `:8081` | Metrics + health probe server listen address (`host:port`, e.g. `:8081` for all interfaces or `127.0.0.1:8081` for localhost only) |
 
 ## Project Layout
 
