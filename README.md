@@ -104,6 +104,12 @@ GORT needs a GitHub token to read repositories and create fix PRs.
 4. Grant the permissions listed below
 5. Copy the token and set it as `GORT_GITHUB_TOKEN`
 
+> **Note:** If you plan to use `GORT_AI_PROVIDER=github-models` and want
+> `GORT_GITHUB_TOKEN` to double as the models token, you must use a **classic PAT**
+> instead (with `repo` and `models:read` scopes), since fine-grained PATs do not
+> support the `models:read` scope. Alternatively, set `GORT_GITHUB_MODELS_TOKEN`
+> to a separate classic PAT.
+
 #### Required Fine-Grained PAT Permissions
 
 | Permission | Access | Why |
@@ -202,7 +208,7 @@ make generate
 | `GORT_CLAUDE_API_KEY` | if `GORT_AI_PROVIDER=claude` | — | Anthropic Claude API key |
 | `GORT_CLAUDE_MODEL` | no | `claude-sonnet-4-6` | Claude model to use when `GORT_AI_PROVIDER=claude` |
 | `GORT_AI_PROVIDER` | no | `claude` | AI provider (`claude`, `github-models`, or `ollama`) |
-| `GORT_GITHUB_MODELS_TOKEN` | if `GORT_AI_PROVIDER=github-models` | `GORT_GITHUB_TOKEN` | GitHub Models API token when using `github-models` (needs `models:read` scope) |
+| `GORT_GITHUB_MODELS_TOKEN` | if `GORT_AI_PROVIDER=github-models` | `GORT_GITHUB_TOKEN` | GitHub Models API token — requires a classic PAT with `models:read` scope |
 | `GORT_GITHUB_MODELS_MODEL` | no | `openai/gpt-4.1` | Model to use when `GORT_AI_PROVIDER=github-models` |
 | `GORT_OLLAMA_URL` | no | `http://localhost:11434` | Ollama server URL when `GORT_AI_PROVIDER=ollama` |
 | `GORT_OLLAMA_MODEL` | no | `llama3` | Model to use when `GORT_AI_PROVIDER=ollama` |
