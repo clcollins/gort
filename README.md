@@ -204,7 +204,7 @@ make generate
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
 | `GORT_GITHUB_WEBHOOK_SECRET` | yes | — | GitHub webhook HMAC secret (`GORT_WEBHOOK_SECRET` also accepted, deprecated) |
-| `GORT_GITHUB_TOKEN` | yes | — | GitHub personal access token (repo + PR scope) |
+| `GORT_GITHUB_TOKEN` | yes | — | GitHub personal access token (fine-grained with Contents + Pull requests permissions, or classic with `repo` scope) |
 | `GORT_CLAUDE_API_KEY` | if `GORT_AI_PROVIDER=claude` | — | Anthropic Claude API key |
 | `GORT_CLAUDE_MODEL` | no | `claude-sonnet-4-6` | Claude model to use when `GORT_AI_PROVIDER=claude` |
 | `GORT_AI_PROVIDER` | no | `claude` | AI provider (`claude`, `github-models`, or `ollama`) |
