@@ -19,7 +19,8 @@ Update vulnerable dependencies to their latest versions:
 | `golang.org/x/oauth2` | v0.25.0 | v0.36.0 |
 | `golang.org/x/net` | v0.29.0 | v0.52.0 |
 
-Transitive dependencies also updated: `golang.org/x/sys`, `golang.org/x/term`, `golang.org/x/text`.
+Transitive dependencies also updated: `golang.org/x/sys`, `golang.org/x/term`,
+`golang.org/x/text`, `golang.org/x/tools`.
 
 ## Scope
 
