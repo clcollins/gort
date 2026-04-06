@@ -8,9 +8,9 @@ VERSION          ?= $(shell git describe --tags --always --dirty 2>/dev/null || 
 IMAGE_TAG        ?= $(IMAGE_REPO):$(VERSION)
 
 GOBIN            ?= $(shell go env GOPATH)/bin
-CONTROLLER_GEN   ?= $(GOBIN)/controller-gen
-GOLANGCI_LINT    ?= $(GOBIN)/golangci-lint
-CHECKMAKE        ?= $(GOBIN)/checkmake
+CONTROLLER_GEN   ?= $(shell command -v controller-gen 2>/dev/null || echo "$(GOBIN)/controller-gen")
+GOLANGCI_LINT    ?= $(shell command -v golangci-lint 2>/dev/null || echo "$(GOBIN)/golangci-lint")
+CHECKMAKE        ?= $(shell command -v checkmake 2>/dev/null || echo "$(GOBIN)/checkmake")
 
 GO               := go
 GOFMT            := gofmt
@@ -79,7 +79,8 @@ promrules-check: ## Validate Prometheus alerting rules with promtool
 
 .PHONY: containerfile-check
 containerfile-check: ## Check Containerfile base image tags and registries
-	bash .github/scripts/check-containerfile-tags.sh
+	bash .github/scripts/check-containerfile-tags.sh Containerfile
+	bash .github/scripts/check-containerfile-tags.sh test/Containerfile.ci
 
 # ── Documentation Check ────────────────────────────────────────────────────────
 

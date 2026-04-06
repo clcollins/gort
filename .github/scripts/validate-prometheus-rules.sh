@@ -11,17 +11,24 @@ if [ ! -f "${RULES_FILE}" ]; then
   exit 0
 fi
 
-echo "=== Downloading promtool ${PROM_VERSION} ==="
-PROM_DIR="prometheus-${PROM_VERSION#v}.linux-amd64"
-PROM_TGZ="${PROM_DIR}.tar.gz"
-PROM_BASE="https://github.com/prometheus/prometheus/releases/download/${PROM_VERSION}"
-curl -sL "${PROM_BASE}/${PROM_TGZ}" -o "/tmp/${PROM_TGZ}"
-curl -sL "${PROM_BASE}/sha256sums.txt" -o "/tmp/prometheus-sha256sums.txt"
+# Use preinstalled promtool if available (e.g., inside CI container).
+if command -v promtool >/dev/null 2>&1; then
+  PROMTOOL="promtool"
+  echo "=== Using preinstalled promtool ($(promtool --version 2>&1 | head -1)) ==="
+else
+  echo "=== Downloading promtool ${PROM_VERSION} ==="
+  PROM_DIR="prometheus-${PROM_VERSION#v}.linux-amd64"
+  PROM_TGZ="${PROM_DIR}.tar.gz"
+  PROM_BASE="https://github.com/prometheus/prometheus/releases/download/${PROM_VERSION}"
+  curl -sL "${PROM_BASE}/${PROM_TGZ}" -o "/tmp/${PROM_TGZ}"
+  curl -sL "${PROM_BASE}/sha256sums.txt" -o "/tmp/prometheus-sha256sums.txt"
 
-echo "=== Verifying promtool tarball checksum ==="
-(cd /tmp && grep " ${PROM_TGZ}$" prometheus-sha256sums.txt | sha256sum -c -)
+  echo "=== Verifying promtool tarball checksum ==="
+  (cd /tmp && grep " ${PROM_TGZ}$" prometheus-sha256sums.txt | sha256sum -c -)
 
-tar xzf "/tmp/${PROM_TGZ}" -C /tmp/ "${PROM_DIR}/promtool" --strip-components=1
+  tar xzf "/tmp/${PROM_TGZ}" -C /tmp/ "${PROM_DIR}/promtool" --strip-components=1
+  PROMTOOL="/tmp/promtool"
+fi
 
 echo "=== Installing yq ==="
 YQ_VERSION="v4.44.1"
@@ -37,6 +44,6 @@ EXTRACTED="/tmp/gort-rules-extracted.yaml"
 /tmp/yq eval '{"groups": .spec.groups}' "${RULES_FILE}" > "${EXTRACTED}"
 
 echo "=== Checking Prometheus rule syntax ==="
-/tmp/promtool check rules "${EXTRACTED}"
+${PROMTOOL} check rules "${EXTRACTED}"
 
 echo "PASSED: All Prometheus alerting rules are valid"
