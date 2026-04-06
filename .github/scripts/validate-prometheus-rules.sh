@@ -24,7 +24,7 @@ else
   curl -sL "${PROM_BASE}/sha256sums.txt" -o "/tmp/prometheus-sha256sums.txt"
 
   echo "=== Verifying promtool tarball checksum ==="
-  (cd /tmp && grep " ${PROM_TGZ}$" prometheus-sha256sums.txt | sha256sum -c -)
+  (cd /tmp && grep -F " ${PROM_TGZ}" prometheus-sha256sums.txt | sha256sum -c -)
 
   tar xzf "/tmp/${PROM_TGZ}" -C /tmp/ "${PROM_DIR}/promtool" --strip-components=1
   PROMTOOL="/tmp/promtool"

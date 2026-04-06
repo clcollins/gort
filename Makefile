@@ -142,10 +142,10 @@ $(CONTROLLER_GEN):
 	$(GO) install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
 
 $(GOLANGCI_LINT):
-	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	$(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.1.6
 
 $(CHECKMAKE):
-	$(GO) install github.com/checkmake/checkmake/cmd/checkmake@latest
+	$(GO) install github.com/mrtazz/checkmake/cmd/checkmake@v0.2.2
 
 # ── Clean ──────────────────────────────────────────────────────────────────────
 

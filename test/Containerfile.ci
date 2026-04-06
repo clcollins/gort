@@ -42,7 +42,7 @@ RUN ARCH=$(case $(uname -m) in x86_64) echo amd64;; aarch64) echo arm64;; *) ech
     && RELEASE_URL="https://github.com/prometheus/prometheus/releases/download/v${PROMTOOL_VERSION}" \
     && curl -sSLf -o "/tmp/${PROM_ARCHIVE}" "${RELEASE_URL}/${PROM_ARCHIVE}" \
     && curl -sSLf -o /tmp/sha256sums.txt "${RELEASE_URL}/sha256sums.txt" \
-    && grep " ${PROM_ARCHIVE}$" /tmp/sha256sums.txt > /tmp/prometheus.sha256 \
+    && grep -F " ${PROM_ARCHIVE}" /tmp/sha256sums.txt > /tmp/prometheus.sha256 \
     && (cd /tmp && sha256sum -c /tmp/prometheus.sha256) \
     && tar -xzf "/tmp/${PROM_ARCHIVE}" --strip-components=1 -C /usr/local/bin "prometheus-${PROMTOOL_VERSION}.linux-${ARCH}/promtool" \
     && rm -f "/tmp/${PROM_ARCHIVE}" /tmp/sha256sums.txt /tmp/prometheus.sha256 \

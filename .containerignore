@@ -5,11 +5,9 @@ docs/
 img/
 config/
 hack/
-test/
 *.md
 LICENSE
 .markdownlint.yaml
 .golangci.yml
 .yamllint.yaml
-.containerignore
 coverage.out
