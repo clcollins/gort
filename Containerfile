@@ -1,5 +1,5 @@
 # Stage 1: build — uses /opt/app-root/src (go-toolset default, owned by UID 1001)
-FROM registry.access.redhat.com/ubi9/go-toolset:latest AS builder
+FROM registry.access.redhat.com/ubi9/go-toolset:1.25 AS builder
 
 ARG VERSION=dev
 
@@ -19,7 +19,7 @@ RUN CGO_ENABLED=0 GOOS=linux \
 RUN ./gort --help
 
 # Stage 2: runtime — UBI9 minimal (no shell, no package manager, smallest attack surface)
-FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.6
 
 ARG BUILD_DATE=1970-01-01T00:00:00Z
 ARG VCS_REF=unknown

@@ -23,16 +23,18 @@ following the same standards.
 
 ### Containerized CI
 
-All CI checks run inside a dedicated CI container image. This guarantees that
-local and remote CI environments are identical — no environment drift, no
-"works on my machine" failures.
+Lint and validation checks run inside a dedicated CI container image built from
+`test/Containerfile.ci`. This guarantees that local and remote CI environments
+are identical — no environment drift, no "works on my machine" failures.
 
-- A `test/Containerfile.ci` defines the CI container with all lint and
-  validation tools pre-installed
+- `test/Containerfile.ci` defines the CI container with all lint and
+  validation tools pre-installed (based on `fedora-minimal`)
 - `make ci-all` builds the CI container and runs `make ci-checks` inside it
   serially — this is the local developer entry point
 - The GHA workflow builds the same CI container image once, then fans out to
   parallel jobs that each run a single `make <target>` inside that image
+- Go build/test/lint jobs may run directly on the GHA runner when they require
+  the race detector, coverage uploads, or specific Go toolchain setup
 - Tests that require the host container engine (e.g., building the application
   image) run directly on the GHA runner, not inside the CI container
 
@@ -40,16 +42,18 @@ local and remote CI environments are identical — no environment drift, no
 
 - **Locally**: `make ci-all` runs all checks serially in a single container
   invocation for simplicity
-- **Remotely (GHA)**: Each check runs as a separate parallel job using the
-  same CI container image, for faster feedback
-- Both paths use the same Makefile targets and the same container image,
-  ensuring identical behavior
+- **Remotely (GHA)**: Each check runs as a separate parallel job — lint checks
+  inside the CI container, Go checks on native runners for race detector and
+  coverage support
+- Both paths should use the same Makefile targets where practical, but remote
+  CI may use native-runner implementations for Go-specific checks that require
+  the race detector, coverage uploads, or the host container engine
 
 ### Makefile Structure for CI
 
 The Makefile must provide:
 
-- `ci-build` — Build the CI container image
+- `ci-build` — Build the CI container image from `test/Containerfile.ci`
 - `ci-all` — Build the CI container and run `ci-checks` inside it (local entry point)
 - `ci-checks` — Run all checks serially (intended to run inside the CI container)
 - Individual check targets (e.g., `yaml-lint`, `markdown-lint`) — each runnable
@@ -76,7 +80,6 @@ Every repository should include the following checks, as applicable:
 
 - All targets must be declared `.PHONY`
 - Must include `clean` and `test` targets
-- `test` should run the full CI suite (`ci-all`)
 - Use variables for configurable values (container engine, registry, image name)
 - Support `.env` files for local configuration overrides
 
@@ -102,8 +105,9 @@ All container images must include these standard labels:
 ### Plan Documents
 
 - Every change must have an associated plan document in `docs/plans/`
-- Plan documents use descriptive filenames (e.g., `container-based-ci.md`),
-  not numeric prefixes — PR/issue numbers are not known until after creation
+- Plan documents use descriptive filenames (e.g., `align-conventions.md`)
+- Numeric prefixes (e.g., `0001-init-project.md`) are acceptable for ordering
+  but not required
 - Plans must consider lessons learned from previous plans in the same directory
 - Superseded plans are preserved with a clear note at the top pointing to
   the replacement plan

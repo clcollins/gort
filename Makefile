@@ -8,9 +8,9 @@ VERSION          ?= $(shell git describe --tags --always --dirty 2>/dev/null || 
 IMAGE_TAG        ?= $(IMAGE_REPO):$(VERSION)
 
 GOBIN            ?= $(shell go env GOPATH)/bin
-CONTROLLER_GEN   ?= $(GOBIN)/controller-gen
-GOLANGCI_LINT    ?= $(GOBIN)/golangci-lint
-CHECKMAKE        ?= $(GOBIN)/checkmake
+CONTROLLER_GEN   ?= $(shell command -v controller-gen 2>/dev/null || echo "$(GOBIN)/controller-gen")
+GOLANGCI_LINT    ?= $(shell command -v golangci-lint 2>/dev/null || echo "$(GOBIN)/golangci-lint")
+CHECKMAKE        ?= $(shell command -v checkmake 2>/dev/null || echo "$(GOBIN)/checkmake")
 
 GO               := go
 GOFMT            := gofmt
@@ -59,9 +59,12 @@ vet: ## Run go vet
 lint: $(GOLANGCI_LINT) ## Run golangci-lint
 	$(GOLANGCI_LINT) run ./...
 
+MARKDOWNLINT_VERSION ?= 0.20.0
+MARKDOWNLINT ?= $(shell command -v markdownlint-cli2 2>/dev/null || echo "npx --yes markdownlint-cli2@$(MARKDOWNLINT_VERSION)")
+
 .PHONY: markdown-lint
 markdown-lint: ## Lint all markdown files with markdownlint-cli2
-	npx --yes markdownlint-cli2 "docs/**/*.md" "*.md"
+	$(MARKDOWNLINT) "docs/**/*.md" "*.md"
 
 .PHONY: makefile-lint
 makefile-lint: $(CHECKMAKE) ## Lint this Makefile with checkmake
@@ -77,7 +80,8 @@ promrules-check: ## Validate Prometheus alerting rules with promtool
 
 .PHONY: containerfile-check
 containerfile-check: ## Check Containerfile base image tags and registries
-	bash .github/scripts/check-containerfile-tags.sh
+	bash .github/scripts/check-containerfile-tags.sh Containerfile
+	bash .github/scripts/check-containerfile-tags.sh test/Containerfile.ci
 
 # ── Documentation Check ────────────────────────────────────────────────────────
 
@@ -110,12 +114,19 @@ image-push: ## Push the container image using $(CONTAINER_SUBSYS)
 
 # ── Local CI ───────────────────────────────────────────────────────────────────
 
-.PHONY: ci-all
-ci-all: tidy-check fmt vet cover lint build docs-check markdown-lint yaml-lint makefile-lint promrules-check containerfile-check image-build ## Run all CI checks locally (mirrors .github/workflows/ci.yaml)
+CI_CONTAINER_FILE ?= test/Containerfile.ci
+CI_IMAGE          ?= gort-ci:local
 
-.PHONY: ci-container
-ci-container: ## Run all CI checks inside ubuntu:latest (mirrors GitHub Actions ubuntu-latest environment)
-	$(CONTAINER_SUBSYS) run --rm -v "$(CURDIR):/workspace:z" -v /var/run/docker.sock:/var/run/docker.sock -w /workspace -e CONTAINER_SUBSYS=docker ubuntu:latest bash hack/ci-container.sh
+.PHONY: ci-build
+ci-build: ## Build the CI container image
+	$(CONTAINER_SUBSYS) build -f $(CI_CONTAINER_FILE) -t $(CI_IMAGE) test/
+
+.PHONY: ci-all
+ci-all: ci-build ## Build CI container and run ci-checks inside it (local entry point)
+	$(CONTAINER_SUBSYS) run --rm --userns=keep-id -v $$(pwd):/src:Z -w /src $(CI_IMAGE) make ci-checks
+
+.PHONY: ci-checks
+ci-checks: tidy-check fmt vet cover lint build docs-check markdown-lint yaml-lint makefile-lint promrules-check containerfile-check ## Run all checks serially (intended to run inside the CI container)
 
 # ── Dependencies / Tools ───────────────────────────────────────────────────────
 
@@ -132,10 +143,10 @@ $(CONTROLLER_GEN):
 	$(GO) install sigs.k8s.io/controller-tools/cmd/controller-gen@latest
 
 $(GOLANGCI_LINT):
-	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	$(GO) install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.3
 
 $(CHECKMAKE):
-	$(GO) install github.com/checkmake/checkmake/cmd/checkmake@latest
+	$(GO) install github.com/mrtazz/checkmake/cmd/checkmake@v0.2.2
 
 # ── Clean ──────────────────────────────────────────────────────────────────────
 
