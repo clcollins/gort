@@ -209,7 +209,7 @@ make generate
 | `GORT_CLAUDE_API_KEY` | if `GORT_AI_PROVIDER=claude` | — | Anthropic Claude API key |
 | `GORT_CLAUDE_MODEL` | no | `claude-sonnet-4-6` | Claude model to use when `GORT_AI_PROVIDER=claude` |
 | `GORT_AI_PROVIDER` | no | `claude` | AI provider (`claude`, `github-models`, or `ollama`) |
-| `GORT_GITHUB_MODELS_TOKEN` | if `GORT_AI_PROVIDER=github-models` | `GORT_GITHUB_TOKEN` | GitHub Models API token — requires a classic PAT with `models:read` scope |
+| `GORT_GITHUB_MODELS_TOKEN` | no | `GORT_GITHUB_TOKEN` | GitHub Models API token — either this or the fallback `GORT_GITHUB_TOKEN` must be a classic PAT with `models:read` scope |
 | `GORT_GITHUB_MODELS_MODEL` | no | `openai/gpt-4.1` | Model to use when `GORT_AI_PROVIDER=github-models` |
 | `GORT_OLLAMA_URL` | no | `http://localhost:11434` | Ollama server URL when `GORT_AI_PROVIDER=ollama` |
 | `GORT_OLLAMA_MODEL` | no | `llama3` | Model to use when `GORT_AI_PROVIDER=ollama` |
