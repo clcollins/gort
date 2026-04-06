@@ -87,10 +87,85 @@ GORT runs two HTTP servers so that Prometheus scrape traffic is independent of w
 
 ## Documentation Convention
 
-Every PR to this repository **must** include a plan document in `docs/plans/`.
-CI enforces this. File naming: `NNNN-short-description.md`.
+Every PR to this repository should include a plan document in `docs/plans/`.
+CI checks that at least one plan document exists. Use descriptive filenames
+(e.g., `setup-documentation.md`); numeric prefixes are optional.
 
 GORT follows the same convention when opening fix PRs on target repos.
+
+## Setup
+
+### 1. GitHub Personal Access Token
+
+GORT needs a GitHub token to read repositories and create fix PRs.
+
+1. Go to **GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens**
+2. Click **Generate new token**
+3. Set the **Repository access** to the repos GORT will manage
+4. Grant the permissions listed below
+5. Copy the token and set it as `GORT_GITHUB_TOKEN`
+
+> **Note:** If you plan to use `GORT_AI_PROVIDER=github-models` and want
+> `GORT_GITHUB_TOKEN` to double as the models token, you must use a **classic PAT**
+> instead (with `repo` and `models:read` scopes), since fine-grained PATs do not
+> support the `models:read` scope. Alternatively, set `GORT_GITHUB_MODELS_TOKEN`
+> to a separate classic PAT.
+
+#### Required Fine-Grained PAT Permissions
+
+| Permission | Access | Why |
+| --- | --- | --- |
+| **Contents** | Read and write | Read repo files and plan docs; create fix branches and commits |
+| **Pull requests** | Read and write | Open fix PRs |
+
+### 2. GitHub Webhook
+
+GORT receives push events via a GitHub webhook with HMAC signature validation.
+
+1. Generate a webhook secret:
+
+   ```sh
+   openssl rand -hex 32
+   ```
+
+2. In your target repository, go to **Settings → Webhooks → Add webhook**
+3. Configure the webhook:
+
+   | Field | Value |
+   | --- | --- |
+   | **Payload URL** | `http://<your-gort-host>:8080/webhook` (GORT does not terminate TLS; use a reverse proxy or Ingress for HTTPS) |
+   | **Content type** | `application/json` |
+   | **Secret** | The value generated in step 1 |
+
+4. Under **Which events would you like to trigger this webhook?**, select **Just the push event**
+5. Click **Add webhook**
+6. Set the same secret value as `GORT_GITHUB_WEBHOOK_SECRET`
+
+### 3. AI Provider
+
+GORT uses an AI provider to analyze failures and validate intent. Choose one:
+
+#### Claude (default)
+
+1. Create an API key at [console.anthropic.com](https://console.anthropic.com/)
+2. Set `GORT_CLAUDE_API_KEY` to the key value
+3. Optionally set `GORT_CLAUDE_MODEL` (default: `claude-sonnet-4-6`)
+
+#### GitHub Models (alternative)
+
+1. Set `GORT_AI_PROVIDER=github-models`
+2. Set `GORT_GITHUB_MODELS_TOKEN` to a GitHub token that can access GitHub Models
+   (defaults to `GORT_GITHUB_TOKEN` if not set — a classic PAT with `models:read`
+   scope is required; fine-grained PATs do not support this scope)
+3. Optionally set `GORT_GITHUB_MODELS_MODEL` (default: `openai/gpt-4.1`)
+
+#### Ollama (local)
+
+1. Set `GORT_AI_PROVIDER=ollama`
+2. Optionally set `GORT_OLLAMA_URL` (default: `http://localhost:11434`)
+3. Optionally set `GORT_OLLAMA_MODEL` (default: `llama3`)
+
+No API key required — Ollama runs without authentication by default.
 
 ## Development
 
@@ -130,16 +205,16 @@ make generate
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
 | `GORT_GITHUB_WEBHOOK_SECRET` | yes | — | GitHub webhook HMAC secret (`GORT_WEBHOOK_SECRET` also accepted, deprecated) |
-| `GORT_GITHUB_TOKEN` | yes | — | GitHub personal access token (repo + PR scope) |
+| `GORT_GITHUB_TOKEN` | yes | — | GitHub personal access token (fine-grained with Contents + Pull requests permissions, or classic with `repo` scope) |
 | `GORT_CLAUDE_API_KEY` | if `GORT_AI_PROVIDER=claude` | — | Anthropic Claude API key |
 | `GORT_CLAUDE_MODEL` | no | `claude-sonnet-4-6` | Claude model to use when `GORT_AI_PROVIDER=claude` |
 | `GORT_AI_PROVIDER` | no | `claude` | AI provider (`claude`, `github-models`, or `ollama`) |
-| `GORT_GITHUB_MODELS_TOKEN` | if `GORT_AI_PROVIDER=github-models` | `GORT_GITHUB_TOKEN` | GitHub Models API token when using `github-models` (needs `models:read` scope) |
+| `GORT_GITHUB_MODELS_TOKEN` | no | `GORT_GITHUB_TOKEN` | GitHub Models API token — either this or the fallback `GORT_GITHUB_TOKEN` must be a classic PAT with `models:read` scope |
 | `GORT_GITHUB_MODELS_MODEL` | no | `openai/gpt-4.1` | Model to use when `GORT_AI_PROVIDER=github-models` |
 | `GORT_OLLAMA_URL` | no | `http://localhost:11434` | Ollama server URL when `GORT_AI_PROVIDER=ollama` |
 | `GORT_OLLAMA_MODEL` | no | `llama3` | Model to use when `GORT_AI_PROVIDER=ollama` |
-| `GORT_LISTEN_ADDR` | no | `:8080` | Webhook server listen address |
-| `GORT_METRICS_ADDR` | no | `:8081` | Metrics + health probe server listen address |
+| `GORT_LISTEN_ADDR` | no | `:8080` | Webhook server listen address (`host:port`, e.g. `:8080` for all interfaces or `127.0.0.1:8080` for localhost only) |
+| `GORT_METRICS_ADDR` | no | `:8081` | Metrics + health probe server listen address (`host:port`, e.g. `:8081` for all interfaces or `127.0.0.1:8081` for localhost only) |
 
 ## Project Layout
 
