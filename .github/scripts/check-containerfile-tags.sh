@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Checks Containerfile FROM lines for :latest tags and missing registry prefixes.
-# Currently warn-only — exits 0 even on findings. Flip ENFORCE=1 once base images are pinned.
+# ENFORCE=1 by default — exits non-zero on findings. Set ENFORCE=0 for warn-only mode.
 set -euo pipefail
 
 CONTAINERFILE="${1:-Containerfile}"

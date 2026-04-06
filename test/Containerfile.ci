@@ -29,17 +29,23 @@ RUN go install github.com/mrtazz/checkmake/cmd/checkmake@v${CHECKMAKE_VERSION} \
     && checkmake --version
 
 # Python tools.
-RUN pip3 install --no-cache-dir yamllint==${YAMLLINT_VERSION} \
+RUN pip3 install --break-system-packages --no-cache-dir yamllint==${YAMLLINT_VERSION} \
     && yamllint --version
 
 # Node tools.
 RUN npm install -g markdownlint-cli2@${MARKDOWNLINT_VERSION} \
     && command -v markdownlint-cli2
 
-# promtool — download pre-built binary.
+# promtool — download pre-built binary with checksum verification.
 RUN ARCH=$(case $(uname -m) in x86_64) echo amd64;; aarch64) echo arm64;; *) echo $(uname -m);; esac) \
-    && curl -sSLf "https://github.com/prometheus/prometheus/releases/download/v${PROMTOOL_VERSION}/prometheus-${PROMTOOL_VERSION}.linux-${ARCH}.tar.gz" \
-       | tar -xz --strip-components=1 -C /usr/local/bin "prometheus-${PROMTOOL_VERSION}.linux-${ARCH}/promtool" \
+    && PROM_ARCHIVE="prometheus-${PROMTOOL_VERSION}.linux-${ARCH}.tar.gz" \
+    && RELEASE_URL="https://github.com/prometheus/prometheus/releases/download/v${PROMTOOL_VERSION}" \
+    && curl -sSLf -o "/tmp/${PROM_ARCHIVE}" "${RELEASE_URL}/${PROM_ARCHIVE}" \
+    && curl -sSLf -o /tmp/sha256sums.txt "${RELEASE_URL}/sha256sums.txt" \
+    && grep " ${PROM_ARCHIVE}$" /tmp/sha256sums.txt > /tmp/prometheus.sha256 \
+    && (cd /tmp && sha256sum -c /tmp/prometheus.sha256) \
+    && tar -xzf "/tmp/${PROM_ARCHIVE}" --strip-components=1 -C /usr/local/bin "prometheus-${PROMTOOL_VERSION}.linux-${ARCH}/promtool" \
+    && rm -f "/tmp/${PROM_ARCHIVE}" /tmp/sha256sums.txt /tmp/prometheus.sha256 \
     && promtool --version
 
 # Clean up Go module cache from tool installs.

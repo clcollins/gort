@@ -45,7 +45,9 @@ are identical — no environment drift, no "works on my machine" failures.
 - **Remotely (GHA)**: Each check runs as a separate parallel job — lint checks
   inside the CI container, Go checks on native runners for race detector and
   coverage support
-- Both paths use the same Makefile targets, ensuring identical behavior
+- Both paths should use the same Makefile targets where practical, but remote
+  CI may use native-runner implementations for Go-specific checks that require
+  the race detector, coverage uploads, or the host container engine
 
 ### Makefile Structure for CI
 

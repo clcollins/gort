@@ -59,9 +59,11 @@ vet: ## Run go vet
 lint: $(GOLANGCI_LINT) ## Run golangci-lint
 	$(GOLANGCI_LINT) run ./...
 
+MARKDOWNLINT ?= $(shell command -v markdownlint-cli2 2>/dev/null || echo "npx --yes markdownlint-cli2")
+
 .PHONY: markdown-lint
 markdown-lint: ## Lint all markdown files with markdownlint-cli2
-	npx --yes markdownlint-cli2 "docs/**/*.md" "*.md"
+	$(MARKDOWNLINT) "docs/**/*.md" "*.md"
 
 .PHONY: makefile-lint
 makefile-lint: $(CHECKMAKE) ## Lint this Makefile with checkmake
