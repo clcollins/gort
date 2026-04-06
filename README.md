@@ -126,7 +126,7 @@ GORT receives push events via a GitHub webhook with HMAC signature validation.
 
    | Field | Value |
    | --- | --- |
-   | **Payload URL** | `https://<your-gort-host>:8080/webhook` |
+   | **Payload URL** | `http://<your-gort-host>:8080/webhook` (GORT does not terminate TLS; use a reverse proxy or Ingress for HTTPS) |
    | **Content type** | `application/json` |
    | **Secret** | The value generated in step 1 |
 
