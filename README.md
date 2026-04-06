@@ -147,8 +147,9 @@ GORT uses an AI provider to analyze failures and validate intent. Choose one:
 #### GitHub Models (alternative)
 
 1. Set `GORT_AI_PROVIDER=github-models`
-2. Optionally set `GORT_GITHUB_MODELS_TOKEN` (defaults to `GORT_GITHUB_TOKEN`)
-   — the token needs `models:read` scope
+2. Set `GORT_GITHUB_MODELS_TOKEN` to a GitHub token that can access GitHub Models
+   (defaults to `GORT_GITHUB_TOKEN` if not set — a classic PAT with `models:read`
+   scope is required; fine-grained PATs do not support this scope)
 3. Optionally set `GORT_GITHUB_MODELS_MODEL` (default: `openai/gpt-4.1`)
 
 #### Ollama (local)
