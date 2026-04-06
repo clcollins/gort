@@ -11,8 +11,36 @@ on:
 permissions:
   contents: read
 
+env:
+  CI_IMAGE: gort-ci:local
+
 jobs:
-  # ── Go checks ────────────────────────────────────────────────────────────────
+  # ── CI Container Build ──────────────────────────────────────────────────────
+  ci-build:
+    name: CI Container Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Build CI container image
+        run: make ci-build
+
+      - name: Save CI container image
+        run: podman save ${{ env.CI_IMAGE }} -o ci-image.tar
+
+      - name: Upload CI container image
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-image
+          path: ci-image.tar
+          retention-days: 1
+
+  # ── Go checks (native runner — need race detector and coverage upload) ──────
   tidy-check:
     name: Go Tidy Check
     runs-on: ubuntu-latest
@@ -95,69 +123,92 @@ jobs:
       - name: Verify binary runs
         run: ./bin/gort --help
 
-  # ── Docs check ───────────────────────────────────────────────────────────────
+  # ── Containerized lint checks (run inside CI container) ─────────────────────
   docs-check:
     name: Plan document required
+    needs: ci-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0
-      - name: Check for plan document in docs/plans/
-        run: make docs-check
+          name: ci-image
+      - name: Load CI image
+        run: podman load -i ci-image.tar
+      - name: Check for plan documents
+        run: podman run --rm -v "$(pwd):/src:Z" -w /src ${{ env.CI_IMAGE }} make docs-check
 
-  # ── Markdown lint ─────────────────────────────────────────────────────────────
   markdown-lint:
     name: Markdown lint
+    needs: ci-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-image
+      - name: Load CI image
+        run: podman load -i ci-image.tar
       - name: Run markdownlint-cli2
-        run: make markdown-lint
+        run: podman run --rm -v "$(pwd):/src:Z" -w /src ${{ env.CI_IMAGE }} make markdown-lint
 
-  # ── YAML lint ─────────────────────────────────────────────────────────────────
   yaml-lint:
     name: YAML lint
+    needs: ci-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install yamllint
-        run: python3 -m pip install --break-system-packages yamllint
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-image
+      - name: Load CI image
+        run: podman load -i ci-image.tar
       - name: Lint YAML files
-        run: make yaml-lint
+        run: podman run --rm -v "$(pwd):/src:Z" -w /src ${{ env.CI_IMAGE }} make yaml-lint
 
-  # ── Makefile lint ─────────────────────────────────────────────────────────────
   makefile-lint:
     name: Makefile lint
+    needs: ci-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/download-artifact@v4
         with:
-          go-version-file: go.mod
-          cache: true
+          name: ci-image
+      - name: Load CI image
+        run: podman load -i ci-image.tar
       - name: Run checkmake
-        run: make makefile-lint
+        run: podman run --rm -v "$(pwd):/src:Z" -w /src ${{ env.CI_IMAGE }} make makefile-lint
 
-  # ── Prometheus rules ──────────────────────────────────────────────────────────
   prometheus-rules:
     name: Prometheus rule validation
+    needs: ci-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-image
+      - name: Load CI image
+        run: podman load -i ci-image.tar
       - name: Validate Prometheus alerting rules
-        run: make promrules-check
+        run: podman run --rm -v "$(pwd):/src:Z" -w /src ${{ env.CI_IMAGE }} make promrules-check
 
-  # ── Containerfile check ───────────────────────────────────────────────────────
   containerfile-check:
     name: Containerfile tag check
+    needs: ci-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-image
+      - name: Load CI image
+        run: podman load -i ci-image.tar
       - name: Check Containerfile base image tags
-        run: make containerfile-check
+        run: podman run --rm -v "$(pwd):/src:Z" -w /src ${{ env.CI_IMAGE }} make containerfile-check
 
-  # ── Container image build ─────────────────────────────────────────────────────
+  # ── Container image build (host runner — needs container engine) ────────────
   image-build:
     name: Container image build
     runs-on: ubuntu-latest

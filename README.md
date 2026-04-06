@@ -6,8 +6,8 @@
 [![codecov](https://codecov.io/gh/clcollins/gort/branch/main/graph/badge.svg)](https://codecov.io/gh/clcollins/gort)
 
 GORT closes the feedback loop after a merge to `main`. It watches for GitHub push events,
-polls Flux until reconciliation completes, and if anything goes wrong it uses the Claude
-API to analyze the failure and automatically opens a fix PR.
+polls Flux until reconciliation completes, and if anything goes wrong it uses a configurable
+AI provider to analyze the failure and automatically opens a fix PR.
 
 ## Problem
 
@@ -28,11 +28,11 @@ GORT webhook handler (HMAC-validated)
 Flux status polling (in-cluster, read-only K8s API)
        │  Kustomizations, HelmReleases, pods, logs, events
        ▼
-       ├── Flux FAILURE ──► Claude API: analyze failure + plan docs
+       ├── Flux FAILURE ──► AI provider: analyze failure + plan docs
        │                               └──► GitHub API: open fix PR
        │
        └── Flux SUCCESS ──► Collect runtime state (pods, deployments, events)
-                            └──► Claude API: validate intent vs plan docs
+                            └──► AI provider: validate intent vs plan docs
                                  ├── Intent MET: done
                                  └── Intent NOT MET ──► GitHub API: open fix PR
 ```
@@ -43,7 +43,7 @@ Flux status polling (in-cluster, read-only K8s API)
 | --- | --- | --- |
 | `pkg/gitops.Client` | Flux CD | ArgoCD, Rancher Fleet |
 | `pkg/vcs.Client` | GitHub | GitLab, Gitea |
-| `pkg/ai.Client` | Claude (Anthropic) | OpenAI, Gemini, local LLMs |
+| `pkg/ai.Client` | Claude (Anthropic), GitHub Models, Ollama | OpenAI, Gemini |
 
 ## GitOps App Configuration (CRD)
 
@@ -151,6 +151,14 @@ GORT uses an AI provider to analyze failures and validate intent. Choose one:
    — the token needs `models:read` scope
 3. Optionally set `GORT_GITHUB_MODELS_MODEL` (default: `openai/gpt-4.1`)
 
+#### Ollama (local)
+
+1. Set `GORT_AI_PROVIDER=ollama`
+2. Optionally set `GORT_OLLAMA_URL` (default: `http://localhost:11434`)
+3. Optionally set `GORT_OLLAMA_MODEL` (default: `llama3`)
+
+No API key required — Ollama runs without authentication by default.
+
 ## Development
 
 ### Prerequisites
@@ -190,11 +198,13 @@ make generate
 | --- | --- | --- | --- |
 | `GORT_GITHUB_WEBHOOK_SECRET` | yes | — | GitHub webhook HMAC secret (`GORT_WEBHOOK_SECRET` also accepted, deprecated) |
 | `GORT_GITHUB_TOKEN` | yes | — | GitHub personal access token (repo + PR scope) |
-| `GORT_CLAUDE_API_KEY` | yes | — | Anthropic Claude API key |
-| `GORT_CLAUDE_MODEL` | no | `claude-sonnet-4-6` | Claude model to use |
-| `GORT_AI_PROVIDER` | no | `claude` | AI provider (`claude` or `github-models`) |
-| `GORT_GITHUB_MODELS_TOKEN` | no | `GORT_GITHUB_TOKEN` | GitHub Models API token (needs `models:read` scope) |
-| `GORT_GITHUB_MODELS_MODEL` | no | `openai/gpt-4.1` | Model to use with GitHub Models |
+| `GORT_CLAUDE_API_KEY` | if `GORT_AI_PROVIDER=claude` | — | Anthropic Claude API key |
+| `GORT_CLAUDE_MODEL` | no | `claude-sonnet-4-6` | Claude model to use when `GORT_AI_PROVIDER=claude` |
+| `GORT_AI_PROVIDER` | no | `claude` | AI provider (`claude`, `github-models`, or `ollama`) |
+| `GORT_GITHUB_MODELS_TOKEN` | if `GORT_AI_PROVIDER=github-models` | `GORT_GITHUB_TOKEN` | GitHub Models API token when using `github-models` (needs `models:read` scope) |
+| `GORT_GITHUB_MODELS_MODEL` | no | `openai/gpt-4.1` | Model to use when `GORT_AI_PROVIDER=github-models` |
+| `GORT_OLLAMA_URL` | no | `http://localhost:11434` | Ollama server URL when `GORT_AI_PROVIDER=ollama` |
+| `GORT_OLLAMA_MODEL` | no | `llama3` | Model to use when `GORT_AI_PROVIDER=ollama` |
 | `GORT_LISTEN_ADDR` | no | `:8080` | Webhook server listen address (`host:port`, e.g. `:8080` for all interfaces or `127.0.0.1:8080` for localhost only) |
 | `GORT_METRICS_ADDR` | no | `:8081` | Metrics + health probe server listen address (`host:port`, e.g. `:8081` for all interfaces or `127.0.0.1:8081` for localhost only) |
 
@@ -204,6 +214,8 @@ make generate
 cmd/gort/             — main entrypoint
 internal/
   claudeai/           — Claude AI client (implements pkg/ai.Client)
+  ghmodels/           — GitHub Models AI client (implements pkg/ai.Client)
+  ollama/             — Ollama AI client (implements pkg/ai.Client)
   flux/               — Flux GitOps client (implements pkg/gitops.Client)
   github/             — GitHub VCS client (implements pkg/vcs.Client)
   k8s/                — Kubernetes client wrapper

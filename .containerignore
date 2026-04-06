@@ -1,0 +1,13 @@
+.git
+.github
+bin/
+docs/
+img/
+config/
+hack/
+*.md
+LICENSE
+.markdownlint.yaml
+.golangci.yml
+.yamllint.yaml
+coverage.out
