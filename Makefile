@@ -59,7 +59,8 @@ vet: ## Run go vet
 lint: $(GOLANGCI_LINT) ## Run golangci-lint
 	$(GOLANGCI_LINT) run ./...
 
-MARKDOWNLINT ?= $(shell command -v markdownlint-cli2 2>/dev/null || echo "npx --yes markdownlint-cli2")
+MARKDOWNLINT_VERSION ?= 0.20.0
+MARKDOWNLINT ?= $(shell command -v markdownlint-cli2 2>/dev/null || echo "npx --yes markdownlint-cli2@$(MARKDOWNLINT_VERSION)")
 
 .PHONY: markdown-lint
 markdown-lint: ## Lint all markdown files with markdownlint-cli2
