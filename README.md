@@ -88,7 +88,8 @@ GORT runs two HTTP servers so that Prometheus scrape traffic is independent of w
 ## Documentation Convention
 
 Every PR to this repository **must** include a plan document in `docs/plans/`.
-CI enforces this. File naming: `NNNN-short-description.md`.
+CI enforces this. Use descriptive filenames (e.g., `setup-documentation.md`);
+numeric prefixes are optional.
 
 GORT follows the same convention when opening fix PRs on target repos.
 
